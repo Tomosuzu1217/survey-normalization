@@ -1,0 +1,3143 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アンケートダッシュボード</title>
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: #f0f2f8;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .07), 0 0 0 1px rgba(0, 0, 0, .03);
+        }
+
+        .upload-card-active {
+            box-shadow: 0 10px 28px rgba(79, 70, 229, .14), 0 0 0 2px rgba(99, 102, 241, .18);
+        }
+
+        .upload-card-success {
+            box-shadow: 0 10px 28px rgba(5, 150, 105, .16), 0 0 0 2px rgba(16, 185, 129, .2);
+        }
+
+        .tab-btn {
+            transition: all .2s;
+            border-radius: 14px;
+            padding: 12px 32px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            letter-spacing: 0.02em;
+        }
+
+        .tab-btn.active {
+            background: #4f46e5;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, .35);
+        }
+
+        .tab-btn:not(.active) {
+            background: #fff;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .tab-btn:not(.active):hover {
+            background: #f5f3ff;
+            color: #4f46e5;
+        }
+
+        .tab-btn.disabled {
+            background: #e5e7eb;
+            color: #9ca3af;
+            border: 1px solid #d1d5db;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .q1h {
+            background: linear-gradient(135deg, #4338ca, #6366f1);
+        }
+
+        .q2h {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 400px;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 12px;
+            background: #fafafa;
+        }
+
+        details>summary {
+            list-style: none;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        details>summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .chevron {
+            transition: transform .25s;
+        }
+
+        details[open] .chevron {
+            transform: rotate(180deg);
+        }
+
+        @keyframes up {
+            from {
+                opacity: 0;
+                transform: translateY(12px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .fade {
+            animation: up .3s ease-out;
+        }
+
+        .svc-chip {
+            border-radius: 6px;
+            padding: 2px 9px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+            border: 1.5px solid;
+        }
+
+        .svc-chip.on {
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .svc-chip.off {
+            background: #fff;
+            color: #6b7280;
+            border-color: #d1d5db;
+        }
+
+        td,
+        th {
+            white-space: nowrap;
+        }
+
+        ::-webkit-scrollbar {
+            height: 4px;
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 md:p-6">
+    <div class="max-w-7xl mx-auto space-y-5">
+
+        <!-- HEADER -->
+        <header
+            class="card q1h text-white p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">アンケートダッシュボード</h1>
+                <p class="text-indigo-200 text-sm mt-0.5">ハイクラス・エグゼクティブ向け転職サービス ｜ 表記揺れ正規化・時系列比較</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="savedChips" class="flex flex-wrap gap-2"></div>
+                <button id="helpBtn" onclick="document.getElementById('helpModal').classList.remove('hidden')"
+                    class="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-semibold py-1.5 px-4 rounded-lg text-xs transition whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    使い方
+                </button>
+            </div>
+        </header>
+
+        <!-- HELP MODAL -->
+        <div id="helpModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,.5)"
+            onclick="if(event.target===this)this.classList.add('hidden')">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                    <h2 class="text-lg font-bold text-gray-800">使い方ガイド</h2>
+                    <button onclick="document.getElementById('helpModal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-600 transition text-xl font-bold px-2">&times;</button>
+                </div>
+                <div class="px-6 py-5 space-y-6 text-sm text-gray-700 leading-relaxed">
+
+                    <!-- 概要 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">このツールについて</h3>
+                        <p>ハイクラス・エグゼクティブ向け転職サービスに関するアンケート調査データを分析するダッシュボードです。<br>
+                        アンケートの回答データ（Excel / CSV）をアップロードすると、<strong>2つの分析軸</strong>でフィルタされた結果を自動集計し、グラフやテーブルで可視化します。</p>
+                    </section>
+
+                    <!-- STEP 1 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">STEP 1: データをアップロードする</h3>
+                        <div class="bg-indigo-50 rounded-xl p-4 space-y-2">
+                            <p><strong>対応形式：</strong> <code class="bg-white px-1.5 py-0.5 rounded text-xs">.xlsx</code> <code class="bg-white px-1.5 py-0.5 rounded text-xs">.xls</code> <code class="bg-white px-1.5 py-0.5 rounded text-xs">.csv</code>（UTF-8 / Shift-JIS 自動判定）</p>
+                            <p><strong>アップロード方法：</strong></p>
+                            <ol class="list-decimal list-inside space-y-1 ml-2">
+                                <li>ファイルをドラッグ＆ドロップするか、クリックして選択します</li>
+                                <li>ファイルが認識されると、カードが<strong class="text-emerald-600">緑枠</strong>に変化し、ファイル名とサイズが表示されます</li>
+                                <li>「対象年月」で調査月を選択します（例：2025-03）</li>
+                                <li>「分析・保存」ボタン（点滅して押下を促します）を押すと集計が始まります</li>
+                            </ol>
+                            <p class="text-xs text-gray-500 mt-1">※ ファイルには Q1S1FA〜Q8 までのアンケートヘッダが含まれている必要があります。<br>
+                            ※ CSVはUTF-8（BOM付含む）・Shift-JIS いずれも自動判定され、文字化けしません。<br>
+                            ※ 処理中はプログレスバーと<strong>経過時間</strong>がリアルタイムで表示されます。完了時に処理時間が確定表示されます。</p>
+                        </div>
+                    </section>
+
+                    <!-- STEP 2 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">STEP 2: タブを切り替えて分析する</h3>
+                        <p>アップロード完了後、画面に <strong>「広報・IR」</strong> と <strong>「MP」</strong> の2つのタブが表示されます。<br>
+                        それぞれ異なるデモグラフィック条件で対象者をフィルタし、集計結果を表示します。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                            <div class="bg-blue-50 rounded-xl p-4">
+                                <h4 class="font-bold text-blue-800 mb-1">広報・IR タブ</h4>
+                                <ul class="text-xs space-y-0.5 text-blue-700">
+                                    <li>年齢：25〜64歳（AGEID = 4〜11）</li>
+                                    <li>個人年収：600万円以上（SQ3 = 5〜17）</li>
+                                    <li>転職意向者 or 転職経験者（SQ5 = 1〜6）</li>
+                                </ul>
+                            </div>
+                            <div class="bg-purple-50 rounded-xl p-4">
+                                <h4 class="font-bold text-purple-800 mb-1">MP タブ</h4>
+                                <ul class="text-xs space-y-0.5 text-purple-700">
+                                    <li>年齢：25〜54歳（AGEID = 4〜9）</li>
+                                    <li>個人年収：800万円以上（SQ3 = 7〜17）</li>
+                                    <li>転職意向者のみ（SQ5 = 1〜5）</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">※ タブ上部のバナーに現在のフィルタ条件と有効回答者数（N数）が表示されます。</p>
+                    </section>
+
+                    <!-- 表示内容 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">STEP 3: 表示内容を読む</h3>
+                        <div class="space-y-3">
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-800 mb-1">自社サービス深掘り分析</h4>
+                                <p class="text-xs">JAC Recruitment を固定対象とし、自由想起（Q1/Q2）、設問認知（Q3/Q4）、認知段階（Q5）、接触チャネル（Q6）、関心度（Q7）、利用意向（Q8）を横断的に表示します。</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <h4 class="font-bold text-gray-800 mb-1">Q1 / Q2 想起チャート</h4>
+                                <p class="text-xs">「ハイクラス向け転職サービス」「エグゼクティブ向け転職サービス」と聞いて思い浮かべるサービスの<strong>第一想起</strong>と<strong>全体想起</strong>を<strong>割合（%）</strong>で表示します。</p>
+                                <ul class="text-xs space-y-0.5 mt-1 text-gray-600">
+                                    <li>- 第一想起（S1）：最初に想起されたサービス</li>
+                                    <li>- 全体想起（S1〜S5）：1番目〜5番目に想起されたサービスすべて</li>
+                                    <li>- N数を基準にした割合で表示されます（例：15.3%）</li>
+                                    <li>- 「その他」回答はグラフ・表には含まれず、<strong>各グラフ右下にグレーで件数を注記</strong>表示します</li>
+                                </ul>
+                            </div>
+                            <div class="bg-amber-50 rounded-xl p-4">
+                                <h4 class="font-bold text-amber-800 mb-1">WB（ウェイトバック）加重チャート</h4>
+                                <p class="text-xs">各回答者にWB係数（人口構成比に合わせた重み付け）を掛けた場合の想起率を表示します。<br>
+                                通常の集計（1人=1カウント）との差異を確認し、母集団推定値として参考にできます。<br>
+                                Q1・Q2チャートの下に、アンバー（琥珀色）のグラフで表示されます。</p>
+                            </div>
+                            <div class="bg-teal-50 rounded-xl p-4">
+                                <h4 class="font-bold text-teal-800 mb-1">属性別クロス集計</h4>
+                                <p class="text-xs">Q1・Q2カード最下部の <strong>「■ 属性別クロス集計」</strong> をクリックすると、アコーディオン形式で展開します。<br>
+                                以下の5属性でクロス集計を切り替えて分析できます：</p>
+                                <ul class="text-xs space-y-0.5 mt-1 text-teal-700">
+                                    <li>- <strong>性別</strong>（男性 / 女性）</li>
+                                    <li>- <strong>年齢</strong>（AGEID: 12才未満〜60才以上の11区分）</li>
+                                    <li>- <strong>年収</strong>（SQ3: 〜600万未満 / 600〜800万 / 800〜1000万 / 1000〜1500万 / 1500万以上 / 不明）</li>
+                                    <li>- <strong>役職</strong>（SQ4: 役員〜一般社員の8区分）</li>
+                                    <li>- <strong>転職意向</strong>（SQ5: 3ヶ月以内〜転職なしの7区分）</li>
+                                </ul>
+                                <p class="text-xs mt-2 text-teal-700"><strong>表示内容：</strong></p>
+                                <ul class="text-xs space-y-0.5 mt-0.5 text-teal-600">
+                                    <li>- 第一想起・全体想起のグループ棒グラフ（Top 5サービス）</li>
+                                    <li>- <strong>通常集計テーブル</strong>：TOP10サービス×属性カテゴリ、<strong>%</strong>＋<strong class="text-gray-400">（件数）</strong>をグレーで参考表示</li>
+                                    <li>- <strong class="text-amber-700">WB加重集計テーブル</strong>：同構造でウェイトバック加重値を適用した結果（件数は加重後の小数表示）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 月別比較 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">STEP 4: 複数月を比較する</h3>
+                        <ol class="list-decimal list-inside space-y-1 ml-2">
+                            <li>異なる月のデータを複数回アップロードします（例：2025-02 と 2025-03）</li>
+                            <li>「表示設定」パネルの「基準月」で表示したい月を選びます</li>
+                            <li>「比較月」の月名チップをクリックすると、折れ線グラフで時系列比較ができます</li>
+                        </ol>
+                        <p class="text-xs text-gray-500 mt-2">※ 2か月分以上のデータがあると、ページ下部に「月次トレンド」セクションが自動表示されます。</p>
+                    </section>
+
+                    <!-- データ削除 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">データの削除</h3>
+                        <p>「表示設定」パネル内の <strong class="text-red-500">「データ削除」</strong> ボタンで、保存済みの全データを一括削除できます。<br>
+                        データはブラウザのローカルストレージに保存されるため、別のブラウザやシークレットモードでは共有されません。</p>
+                    </section>
+
+                    <!-- 設問一覧 -->
+                    <section>
+                        <h3 class="text-base font-bold text-indigo-700 mb-2">設問の対応表</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-xs border border-gray-200 rounded-lg">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="py-2 px-3 text-left border-b border-gray-200">設問</th>
+                                        <th class="py-2 px-3 text-left border-b border-gray-200">内容</th>
+                                        <th class="py-2 px-3 text-left border-b border-gray-200">列名（ヘッダ）</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q1</td><td class="py-1.5 px-3">ハイクラス向け自由想起（S1〜S5）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q1S1FA〜Q1S5FA</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q2</td><td class="py-1.5 px-3">エグゼクティブ向け自由想起（S1〜S5）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q2S1FA〜Q2S5FA</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q3 / Q4</td><td class="py-1.5 px-3">提示型認知（30サービス）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q3_1〜Q3_29FA / Q4_1〜Q4_29FA</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q5</td><td class="py-1.5 px-3">認知段階（17サービス）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q5S1〜Q5S17</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q6</td><td class="py-1.5 px-3">接触チャネル（17サービス×15チャネル）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q6S1_1〜Q6S17_15</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q7</td><td class="py-1.5 px-3">関心度（17サービス）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q7S1〜Q7S17</td></tr>
+                                    <tr><td class="py-1.5 px-3 font-semibold">Q8</td><td class="py-1.5 px-3">利用意向（17サービス）</td><td class="py-1.5 px-3 font-mono text-[11px]">Q8S1〜Q8S17</td></tr>
+                                    <tr class="bg-amber-50"><td class="py-1.5 px-3 font-semibold">WB</td><td class="py-1.5 px-3">ウェイトバック係数（最終列）</td><td class="py-1.5 px-3 font-mono text-[11px]">WB（または最終列）</td></tr>
+                                    <tr class="bg-teal-50"><td class="py-1.5 px-3 font-semibold">SEX</td><td class="py-1.5 px-3">性別（属性分析用）</td><td class="py-1.5 px-3 font-mono text-[11px]">SEX</td></tr>
+                                    <tr class="bg-blue-50"><td class="py-1.5 px-3 font-semibold">AGEID</td><td class="py-1.5 px-3">年齢カテゴリ（フィルタ + 属性分析用）</td><td class="py-1.5 px-3 font-mono text-[11px]">AGEID</td></tr>
+                                    <tr class="bg-blue-50"><td class="py-1.5 px-3 font-semibold">SQ3</td><td class="py-1.5 px-3">個人年収カテゴリ（フィルタ + 属性分析用）</td><td class="py-1.5 px-3 font-mono text-[11px]">SQ3</td></tr>
+                                    <tr class="bg-teal-50"><td class="py-1.5 px-3 font-semibold">SQ4</td><td class="py-1.5 px-3">役職（属性分析用）</td><td class="py-1.5 px-3 font-mono text-[11px]">SQ4</td></tr>
+                                    <tr class="bg-blue-50"><td class="py-1.5 px-3 font-semibold">SQ5</td><td class="py-1.5 px-3">転職意向（フィルタ + 属性分析用）</td><td class="py-1.5 px-3 font-mono text-[11px]">SQ5</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- 注意事項 -->
+                    <section class="bg-red-50 rounded-xl p-4">
+                        <h3 class="text-sm font-bold text-red-700 mb-2">注意事項</h3>
+                        <ul class="text-xs space-y-1 text-red-600">
+                            <li>- データはブラウザのローカルストレージに保存されます。他のブラウザやデバイスとは共有されません。</li>
+                            <li>- ローカルストレージの容量制限（通常5〜10MB）を超えると保存に失敗する場合があります。</li>
+                            <li>- サービス名の表記揺れ（全角/半角、スペース有無など）は自動的に正規化されます。</li>
+                            <li>- 同じ年月のデータを再アップロードすると上書きされます。</li>
+                        </ul>
+                    </section>
+
+                </div>
+                <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-3 rounded-b-2xl">
+                    <button onclick="document.getElementById('helpModal').classList.add('hidden')"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg text-sm transition">
+                        閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROL PANEL -->
+        <div class="grid grid-cols-1 gap-5">
+            <!-- Upload -->
+            <div id="uploadCard" class="card p-6 space-y-4 max-w-5xl w-full transition-all duration-300">
+                <h2 class="font-semibold text-gray-700 flex items-center gap-2">
+                    <span
+                        class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-sm flex items-center justify-center font-bold">1</span>
+                    データアップロード
+                </h2>
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">Excelファイル（Q1〜Q8 を含むアンケートヘッダを自動認識）</label>
+                    <label id="dropZone" for="uploadFile"
+                        class="flex flex-col items-center justify-center border-2 border-dashed border-indigo-300 rounded-xl p-5 cursor-pointer hover:bg-indigo-50 transition">
+                        <svg class="w-7 h-7 text-indigo-400 mb-1.5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span class="text-sm text-indigo-600 font-medium">クリックまたはドラッグ&amp;ドロップで選択</span>
+                        <span id="fileName" class="text-xs text-gray-400 mt-0.5">xlsx / xls / csv</span>
+                        <input type="file" id="uploadFile" accept=".xlsx,.xls,.csv,text/csv" class="hidden">
+                    </label>
+                </div>
+                <div class="flex gap-3 items-end">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-gray-400 mb-1">対象年月</label>
+                        <input type="month" id="uploadMonth"
+                            class="w-full rounded-lg border border-gray-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+                    <button id="analyzeBtn"
+                        class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition text-white font-semibold py-2 px-5 rounded-lg shadow text-sm whitespace-nowrap">
+                        分析・保存
+                    </button>
+                </div>
+                <div id="uploadStatus" class="hidden text-xs rounded-lg px-3 py-2 font-medium"></div>
+                <div id="elapsedBadge" class="hidden text-right text-[11px] text-gray-400 mt-1 pr-1"></div>
+                <button id="downloadEnrichedBtn"
+                    class="hidden w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition text-white font-semibold py-2.5 px-5 rounded-lg shadow text-sm whitespace-nowrap flex items-center justify-center gap-2"
+                    onclick="downloadEnrichedData()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    結果ダウンロード（正規化列付き）
+                </button>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div id="tabBar" class="hidden flex gap-2 flex-wrap items-center">
+            <button id="tabIr" class="tab-btn active" onclick="switchTab('ir')">広報・IR</button>
+            <button id="tabMp" class="tab-btn" onclick="switchTab('mp')">MP</button>
+        </div>
+        <div id="filterBanner" class="hidden card px-4 py-2 text-xs text-slate-600 flex items-center gap-2">
+            <span class="font-bold text-indigo-600" id="filterBannerLabel"></span>
+            <span id="filterBannerDesc"></span>
+            <span class="ml-auto font-semibold text-slate-800" id="filterBannerN"></span>
+        </div>
+
+        <!-- === ANALYSIS TAB === -->
+        <div id="tabContent_analysis" class="space-y-6 hidden fade">
+            <div class="card p-6 space-y-4">
+                <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-800">表示設定</h2>
+                        <p class="text-xs text-slate-500 mt-1">分析対象は JAC Recruitment 固定です。月の切り替えと比較設定はこのタブ内で行います。</p>
+                    </div>
+                    <div class="w-full xl:w-64">
+                        <label for="analysisMonthSelect" class="block text-xs font-medium text-gray-400 mb-1">基準月</label>
+                        <select id="analysisMonthSelect"
+                            class="w-full rounded-lg border border-gray-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="">--</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-2">比較月</label>
+                    <div id="analysisCompareMonths" class="flex flex-wrap gap-2"></div>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <p id="analysisCompareHint" class="text-[11px] text-gray-400"></p>
+                        <button id="analysisClearBtn"
+                            class="bg-white border border-red-200 hover:bg-red-50 text-red-400 font-semibold py-2 px-3 rounded-lg text-xs transition whitespace-nowrap">
+                            データ削除
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card overflow-hidden">
+                <div class="bg-slate-900 text-white px-6 py-4">
+                    <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold">自社サービス深掘り分析</h2>
+                            <p id="focusServiceSubtitle" class="text-slate-300 text-xs mt-0.5">
+                                メイン月を基準に、選択サービスの想起構造と併記傾向を確認します
+                            </p>
+                        </div>
+                        <div class="w-full xl:w-80">
+                            <label for="focusServiceSelect" class="block text-[11px] font-semibold text-slate-300 mb-1">
+                                分析対象サービス
+                            </label>
+                            <select id="focusServiceSelect"
+                                class="w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-white p-2 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                                <option value="">サービスを選択</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div id="focusQuestionRefs" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs text-slate-600"></div>
+                    <div id="focusMetricGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                                順位別の想起分布</h3>
+                            <div class="chart-wrap"><canvas id="focusRankChart"></canvas></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                                併記されやすいサービス Top 10</h3>
+                            <div class="chart-wrap"><canvas id="focusCoChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                                ファネル指標</h3>
+                            <div class="chart-wrap"><canvas id="focusFunnelChart"></canvas></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                                接触チャネル Top 10</h3>
+                            <div class="chart-wrap"><canvas id="focusChannelChart"></canvas></div>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                                認知・関心・利用意向</h3>
+                            <div class="chart-wrap"><canvas id="focusAttitudeChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <div class="overflow-x-auto">
+                            <h3 class="text-sm font-semibold text-gray-600 mb-3">Q1 × Q2 クロス集計</h3>
+                            <table class="min-w-full text-sm" id="focusMatrixTable">
+                                <thead>
+                                    <tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                        <th class="py-2 pr-4">軸</th>
+                                        <th class="py-2 px-3 text-right">Q2あり</th>
+                                        <th class="py-2 px-3 text-right">Q2なし</th>
+                                        <th class="py-2 px-3 text-right font-bold">計</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <h3 class="text-sm font-semibold text-gray-600 mb-3">併記クロス集計</h3>
+                            <table class="min-w-full text-sm" id="focusCoTable">
+                                <thead>
+                                    <tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                        <th class="py-2 pr-4">サービス</th>
+                                        <th class="py-2 px-3 text-right">同一回答者</th>
+                                        <th class="py-2 px-3 text-right">Q1内</th>
+                                        <th class="py-2 px-3 text-right">Q2内</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-3">設問ベースのサービス評価サマリー</h3>
+                        <table class="min-w-full text-sm" id="focusSurveyTable">
+                            <thead>
+                                <tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                    <th class="py-2 pr-4">指標</th>
+                                    <th class="py-2 px-3 text-right">人数</th>
+                                    <th class="py-2 px-3 text-right">率</th>
+                                    <th class="py-2 px-3 text-right">補足</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-3">月別比較</h3>
+                        <table class="min-w-full text-sm" id="focusCompareTable">
+                            <thead>
+                                <tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                    <th class="py-2 pr-4">月</th>
+                                    <th class="py-2 px-3 text-right">Q1想起</th>
+                                    <th class="py-2 px-3 text-right">Q2想起</th>
+                                    <th class="py-2 px-3 text-right">Q1第一想起</th>
+                                    <th class="py-2 px-3 text-right">Q2第一想起</th>
+                                    <th class="py-2 px-3 text-right">Q3認知</th>
+                                    <th class="py-2 px-3 text-right">Q4認知</th>
+                                    <th class="py-2 px-3 text-right">利用意向</th>
+                                    <th class="py-2 px-3 text-right">両領域想起率</th>
+                                    <th class="py-2 px-3 text-right">平均スコア</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Q1 card -->
+            <div class="card overflow-hidden">
+                <div class="q1h text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">Q1: ハイクラス向け転職サービス（S1〜S5）</h2>
+                    <p class="text-indigo-200 text-xs mt-0.5">「ハイクラス向け転職サービスと聞いて思い浮かべるサービスは？」</p>
+                </div>
+                <div class="px-6 pt-4 pb-1">
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-indigo-700">
+                        <span class="rounded-full bg-indigo-50 px-3 py-1 font-semibold">参照列: O-S列</span>
+                        <span class="rounded-full bg-indigo-50 px-3 py-1 font-semibold">第一想起 / 全体想起</span>
+                    </div>
+                    <div id="q1RecallSummary" class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3"></div>
+                </div>
+                <div
+                    class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                            第一想起（S1）Top 10</h3>
+                        <div class="chart-wrap"><canvas id="q1s1Chart"></canvas></div>
+                    </div>
+                    <div class="lg:pl-6">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                            全体想起（S1〜S5）Top 10</h3>
+                        <div class="chart-wrap"><canvas id="q1totChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="border-t border-gray-100 px-6 py-5">
+                    <h3 class="text-xs font-bold text-amber-600 mb-3">WB加重集計</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">第一想起（WB加重）</h4>
+                            <div class="chart-wrap"><canvas id="q1s1WbChart"></canvas></div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">全体想起（WB加重）</h4>
+                            <div class="chart-wrap"><canvas id="q1totWbChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Collapsible table -->
+                <details class="border-t border-gray-100">
+                    <summary class="flex items-center justify-between px-6 py-3">
+                        <span class="text-sm font-semibold text-gray-500">■ 詳細データ（全サービス）</span>
+                        <svg class="chevron w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    <div class="overflow-x-auto px-6 pb-4">
+                        <table class="min-w-full text-sm" id="q1Table">
+                            <thead>
+                                <tr
+                                    class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                    <th class="py-2 pr-6">サービス名</th>
+                                    <th class="py-2 px-4 text-right">S1</th>
+                                    <th class="py-2 px-4 text-right font-bold">S1〜S5 合計</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </details>
+                <details class="border-t border-gray-100" id="q1DemoDetails">
+                    <summary class="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-gray-50 transition">
+                        <span class="text-sm font-semibold text-teal-600">■ 属性別クロス集計</span>
+                        <svg class="chevron w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    <div class="px-6 pb-5 space-y-6" id="q1DemoContent">
+                        <div class="flex flex-wrap gap-2" id="q1DemoTabs"></div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">第一想起（S1）属性別</h4>
+                                <div class="chart-wrap"><canvas id="q1DemoS1Chart"></canvas></div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">全体想起（S1〜S5）属性別</h4>
+                                <div class="chart-wrap"><canvas id="q1DemoTotChart"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <h4 class="text-xs font-semibold text-gray-500 mb-2">通常集計</h4>
+                            <table class="min-w-full text-sm" id="q1DemoTable">
+                                <thead id="q1DemoTableHead"></thead>
+                                <tbody class="divide-y divide-gray-50" id="q1DemoTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="overflow-x-auto wb-demo-section hidden mt-4">
+                            <h4 class="text-xs font-bold text-amber-600 mb-2">WB加重集計</h4>
+                            <table class="min-w-full text-sm" id="q1DemoWbTable">
+                                <thead></thead>
+                                <tbody class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Q2 card -->
+            <div class="card overflow-hidden">
+                <div class="q2h text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">Q2: エグゼクティブ向け転職サービス（S1〜S5）</h2>
+                    <p class="text-purple-200 text-xs mt-0.5">「エグゼクティブ向け転職サービスと聞いて思い浮かべるサービスは？」</p>
+                </div>
+                <div class="px-6 pt-4 pb-1">
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-purple-700">
+                        <span class="rounded-full bg-purple-50 px-3 py-1 font-semibold">参照列: T-X列</span>
+                        <span class="rounded-full bg-purple-50 px-3 py-1 font-semibold">第一想起 / 全体想起</span>
+                    </div>
+                    <div id="q2RecallSummary" class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3"></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                    <div>
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                            第一想起（S1）Top 10</h3>
+                        <div class="chart-wrap"><canvas id="q2s1Chart"></canvas></div>
+                    </div>
+                    <div class="lg:pl-6">
+                        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">
+                            全体想起（S1〜S5）Top 10</h3>
+                        <div class="chart-wrap"><canvas id="q2totChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="border-t border-gray-100 px-6 py-5">
+                    <h3 class="text-xs font-bold text-amber-600 mb-3">WB加重集計</h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">第一想起（WB加重）</h4>
+                            <div class="chart-wrap"><canvas id="q2s1WbChart"></canvas></div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">全体想起（WB加重）</h4>
+                            <div class="chart-wrap"><canvas id="q2totWbChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <details class="border-t border-gray-100">
+                    <summary class="flex items-center justify-between px-6 py-3">
+                        <span class="text-sm font-semibold text-gray-500">■ 詳細データ（全サービス）</span>
+                        <svg class="chevron w-4 h-4 text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    <div class="overflow-x-auto px-6 pb-4">
+                        <table class="min-w-full text-sm" id="q2Table">
+                            <thead>
+                                <tr
+                                    class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                    <th class="py-2 pr-6">サービス名</th>
+                                    <th class="py-2 px-4 text-right">S1</th>
+                                    <th class="py-2 px-4 text-right font-bold">S1〜S5 合計</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </details>
+                <details class="border-t border-gray-100" id="q2DemoDetails">
+                    <summary class="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-gray-50 transition">
+                        <span class="text-sm font-semibold text-teal-600">■ 属性別クロス集計</span>
+                        <svg class="chevron w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </summary>
+                    <div class="px-6 pb-5 space-y-6" id="q2DemoContent">
+                        <div class="flex flex-wrap gap-2" id="q2DemoTabs"></div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">第一想起（S1）属性別</h4>
+                                <div class="chart-wrap"><canvas id="q2DemoS1Chart"></canvas></div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2 text-center">全体想起（S1〜S5）属性別</h4>
+                                <div class="chart-wrap"><canvas id="q2DemoTotChart"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <h4 class="text-xs font-semibold text-gray-500 mb-2">通常集計</h4>
+                            <table class="min-w-full text-sm" id="q2DemoTable">
+                                <thead id="q2DemoTableHead"></thead>
+                                <tbody class="divide-y divide-gray-50" id="q2DemoTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="overflow-x-auto wb-demo-section hidden mt-4">
+                            <h4 class="text-xs font-bold text-amber-600 mb-2">WB加重集計</h4>
+                            <table class="min-w-full text-sm" id="q2DemoWbTable">
+                                <thead></thead>
+                                <tbody class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <!-- === TIMELINE TAB === -->
+        <div id="tabContent_timeline" class="space-y-6 hidden fade">
+            <div class="card overflow-hidden">
+                <div class="bg-slate-900 text-white px-6 py-4">
+                    <h2 class="text-lg font-bold">JAC Recruitment 月次トレンド</h2>
+                    <p id="timelineSubtitle" class="text-slate-300 text-xs mt-1"></p>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div id="timelineEmptyState" class="hidden rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400"></div>
+                    <div id="timelineContent" class="space-y-6">
+                        <div id="timelineMetricGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">想起の推移</h3>
+                                <div class="chart-wrap"><canvas id="timelineRecallChart"></canvas></div>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 text-center">態度変容の推移</h3>
+                                <div class="chart-wrap"><canvas id="timelineSurveyTrendChart"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <h3 class="text-sm font-semibold text-gray-600 mb-3">月次比較サマリー</h3>
+                            <table class="min-w-full text-sm" id="timelineTable">
+                                <thead>
+                                    <tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                                        <th class="py-2 pr-4">月</th>
+                                        <th class="py-2 px-3 text-right">Q1想起</th>
+                                        <th class="py-2 px-3 text-right">Q2想起</th>
+                                        <th class="py-2 px-3 text-right">Q3認知</th>
+                                        <th class="py-2 px-3 text-right">Q4認知</th>
+                                        <th class="py-2 px-3 text-right">Q5認知</th>
+                                        <th class="py-2 px-3 text-right">Q7関心</th>
+                                        <th class="py-2 px-3 text-right">Q8利用意向</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center text-xs text-gray-400 pb-6">
+            ✅ データはブラウザ（localStorage）のみで処理・保存されます。外部サーバーへの送信は一切ありません。
+        </footer>
+    </div>
+
+    <script>
+        // =====================================================================
+        // NORMALIZATION ENGINE
+        // =====================================================================
+
+        /** 全角→半角、スペース除去、小文字化 */
+        function norm(s) {
+            return String(s).trim().normalize('NFKC').replace(/[\s　]+/g, '').toLowerCase();
+        }
+
+        // サービス辞書: name は正規名称, variants は全揺れ表記（正規化済みで比較）
+        const SERVICE_DICT = [
+            {
+                name: 'ビズリーチ', variants: [
+                    'ビズリーチ', 'ビザリーチ', 'ビスリーチ', 'ビズリーーチ', 'ピザリーチ', 'バスリーチ', 'bs゛リーチ',
+                    'びずりーち', 'びすりーち', 'バズリーチ', 'ビズリート', 'ビズリサーチ', 'ビズビーチ', 'ビズーリーチ',
+                    'ビズリチ', 'ビィズリーチ', 'ビバリーチ', 'ヒズリーチ', 'リズビーチ', 'リブリーチ', 'ビズリ-チ',
+                    'bizreach', 'bizreech', 'bizrearch', 'bzreach', 'bizpeach', 'bizrrach', 'biz reach', 'biz-reach',
+                    'bizuri-chi', 'bizurichi', 'bisuriichi', 'ビズリーチビズリーチ', 'ビズ', 'biz',
+                    'ビズリーチ（bizreach）', 'ビズリーチ（bizreach）エグゼクティブ',
+                    'Bizリーチ', 'bizリーチ', 'ビズりーち', 'びずリーチ',
+                ], fuzzy: [
+                    /b[a-z]*[- ]?r[eai][a-z]*ch/i,
+                    /[ビビびビ][ズずスす].{0,3}[リりリ].{0,2}[チちチ]/u,
+                    /Biz[リりリ][ーー][チちチ]/u,
+                ]
+            },
+
+            {
+                name: 'doda X', variants: [
+                    'dodax', 'dudax', 'doda x', 'doda.x', 'doda-x', 'doda ex', 'dodaex',
+                    'デューダx', 'デューダｘ', 'デューダex', 'デューダeｘ', 'デューだx', 'デューだex',
+                    'ヂューダx', 'ヂューダex', 'doda_x', 'デューダエックス', 'デューダekus',
+                    'dedax', 'doda xls',
+                ], fuzzy: [
+                    /doda[\s.\-_]?x$/i,
+                    /doda[\s.\-_]?ex/i,
+                    /デ[ュゅ][ーウ]ダ[\s.]?[xｘex]/,
+                    /ヂ[ュゅ][ーウ]ダ[\s.]?[xｘ]/,
+                ]
+            },
+
+            {
+                name: 'doda', variants: [
+                    'doda', 'duda', 'dida', 'dod', 'doだ',
+                    'ドゥーダ', 'デューダ', 'ティーダ', 'ドユーダ', 'デュダ', 'ヂューダ', 'デューだ',
+                    'どだ', 'ｄつーだ', 'デュウダー', 'どゅーだ', 'でゅーだ', 'でゆーだ', 'でゆーだー',
+                    'どゆわーだ', 'ドューダ', 'デユーダ', 'でゅーだー', 'ドゥダ', 'でゅ-だ',
+                    'ドゥーだ', 'どぅーだ', 'どぅださ',
+                ], fuzzy: [
+                    /^d[ouaã]?d[ouaã]?[a-z]?$/i,
+                    /^デ[ュゅ][ーウ]ダ$/,
+                    /^ド[ゥぅ][ーウ]?ダ$/,
+                ]
+            },
+
+            {
+                name: 'JAC Recruitment', variants: [
+                    'jac', 'jac recruitment', 'jac recruiting', 'jacrecruitment', 'jacrecruiting',
+                    'jac recruit', 'jac リクルートメント', 'jcリクルートメント', 'jcリクルート',
+                    'jrcリクルートメント', 'jrc', 'jacr', 'jax', 'joc', 'jra', 'jrac',
+                    'ｊo c', 'j o c', 'jo c', 'j&a', 'じなっく', 'jac executive',
+                    'jacリクルートメント', 'jacリクルート', 'jacリサーチ',
+                    'jacリクルートめんと', 'jacリクルートメンと',
+                    'jrクルートメント', 'jac リクルート',
+                ], fuzzy: [
+                    /^j[aoa][ckrg][\s.]?(r[e]?c[r]?)?/i,
+                ]
+            },
+
+            {
+                name: 'リクルートダイレクトスカウト', variants: [
+                    'ダイレクトスカウト', 'リクナビダイレクト',
+                    'リクルートダイレクトスカウト', 'リクルートダイレクトキャッチ',
+                    'リクルートダイレクトサービス', 'リクルートダイレクトスカウティング',
+                    'リクルートダイレクトスタッフィング', 'リクルートダイレクト',
+                    'リクルートダイレ、クティブ、スカウト',
+                ], fuzzy: [
+                    /ダイレクト.{0,4}スカウト/,
+                    /recruit.*direct/i,
+                ]
+            },
+
+            {
+                name: 'リクルートエグゼクティブエージェント', variants: [
+                    'リクルートエグゼクティブエージェント', 'リクルートエグゼクティブ', 'recruit executive',
+                ], fuzzy: [
+                    /リクルートエグゼ/,
+                ]
+            },
+
+            {
+                name: 'リクルートエージェント', variants: [
+                    'リクルートエージェント', 'リクルートエージェンシー', 'リクルートキャリア',
+                    'リクルートエイジェント', 'リクルートaじぇんんと', 'リクルートスカウト',
+                    'リクルートスタッフィング', 'リクルート エージェント',
+                    'recruiteragent', 'recruit agent',
+                    'リクルートエージェント?', 'リクルートaじぇんんと',
+                ], fuzzy: [
+                    /リクルート.{0,4}エージェント/,
+                    /recruit.{0,6}agent/i,
+                ]
+            },
+
+            {
+                name: 'リクルート（その他）', variants: [
+                    'リクルート', 'リクラート', 'りくるーと', 'リクールト', 'リスクル', 'リスクる',
+                    'リクルート転職', 'リクルートサービス', 'リクルート 転職', 'recruit',
+                ], fuzzy: [
+                    /^リクルート$/,
+                    /^recruit$/i,
+                ]
+            },
+
+            {
+                name: 'リクナビNEXT', variants: [
+                    'リクナビnext', 'リクナビnext', 'リクナビネクスト', 'リクナビ転職', 'リクナビ 転職',
+                    'rikunabi', 'リクナビエージェント', 'リクナビエージ泡',
+                    'リクナビエージェントダイレクトスカウト', 'リクナビダイレクト', 'リクナビ',
+                    'リクナビエージ|泡',
+                ], fuzzy: [
+                    /リクナビ/,
+                    /rikunabi/i,
+                ]
+            },
+
+            {
+                name: 'マイナビ', variants: [
+                    'マイナビ', 'マイマビ', 'まいなひ', 'まいなび', 'マリナビ', 'マイナビ転職',
+                    'マイナビエージェント', 'マイナビネクスト', 'まいなびあじぇんと', 'マイナビネクスト',
+                    'まいなびてんしょく',
+                ], fuzzy: [
+                    /マイ.{0,2}ナビ/,
+                    /my\s?navi/i,
+                ]
+            },
+
+            {
+                name: 'エン転職', variants: [
+                    'エン転職', 'en転職', 'エン', 'エンジャパン', 'エン職', 'えんてんしょく', 'エンてんしよく',
+                    'エンシニア', 'エンゲージ', 'エンゲージメント', 'エンミドルの転職', 'enジャパン',
+                    'enミドルの転職', 'enてんしょく', 'えんてんしょく', 'エンていしょく', 'en職',
+                    'enjapan', 'enjp', 'en転職', 'あんびとん', 'エンミドル', 'en',
+                ], fuzzy: [
+                    /^エン(転職|ジャパン|ミドル|ゲージ)?$/,
+                    /^en(japan|転職|ミドル)?$/i,
+                ]
+            },
+
+            {
+                name: 'LinkedIn', variants: [
+                    'linkedin', 'linked in', 'linkdin', 'リンクドイン', 'linkdn', 'linkedln',
+                    'linked lun', 'link in',
+                ], fuzzy: [
+                    /link[e]?d?\s*i?n/i,
+                ]
+            },
+
+            {
+                name: 'Indeed', variants: [
+                    'indeed', 'インディード', 'インリード', 'インニード', 'インディど', 'インでーど', 'inndeed',
+                    'いんでぃーお', 'インディーど', 'インディーズ', 'indeedプラス', 'indeed+', 'indeedハイクラス',
+                    'indeedplus', 'インでーどプラス', 'インじど', 'いんでーど', 'インでーど', 'インディード＋',
+                    'いんでぃーど',
+                ], fuzzy: [
+                    /in+d[e]?e?d/i,
+                    /インデ[ィイ][ー]?[どドd]/,
+                ]
+            },
+
+            {
+                name: 'ロバート・ウォルターズ', variants: [
+                    'ロバートウォルターズ', 'ロバートウォーターズ', 'robertwalters', 'robert walters',
+                    'robert waltes',
+                ], fuzzy: [
+                    /robert\s*walters?/i,
+                    /ロバート/,
+                ]
+            },
+
+            {
+                name: 'コーン・フェリー', variants: [
+                    'コーンフェリー', 'コーン・フェリー', 'korn ferry', 'kornferry',
+                ], fuzzy: [/korn.?ferry/i]
+            },
+
+            {
+                name: 'エゴンゼンダー', variants: ['エゴンゼンダー', 'egon zehnder', 'egonzehnder'],
+                fuzzy: [/egon.?zehnder/i]
+            },
+
+            {
+                name: 'スペンサースチュアート', variants: ['スペンサースチュアート', 'spencer stuart', 'spencerstuart'],
+                fuzzy: [/spencer.?stuart/i]
+            },
+
+            {
+                name: 'ランスタッド', variants: ['ランスタッド', 'ランドスタッド', 'randstad'],
+                fuzzy: [/randstad/i, /ラン.?スタッド/]
+            },
+
+            {
+                name: 'クライス＆カンパニー', variants:
+                    ['クライスアンドカンパニー', 'クライス＆カンパニー', 'クライス&カンパニー', 'クライス'],
+                fuzzy: [/クライス/]
+            },
+
+            {
+                name: 'パソナ', variants:
+                    ['パソナ', 'パソナキャリア', 'パソナエグゼクティブ', 'パソナ エグゼクティブサービス'],
+                fuzzy: [/パソナ/]
+            },
+
+            {
+                name: 'レバテック', variants: ['レバテック', 'レバテックキャリア', 'レバウェル', 'レバ鉄'],
+                fuzzy: [/レバテック/]
+            },
+
+            {
+                name: 'Hays', variants: ['hays', 'ヘイズ', 'hays recruitment'],
+                fuzzy: [/^hays$/i]
+            },
+
+            {
+                name: 'ミドルの転職', variants: ['ミドルの転職', 'ミドル転職', 'enミドルの転職'],
+                fuzzy: [/ミドル.?転職/]
+            },
+
+            {
+                name: 'ハローワーク', variants: ['ハローワーク', 'ハロワ'],
+                fuzzy: [/ハロ.?ワ/]
+            },
+
+            { name: 'AMBI', variants: ['ambi'], fuzzy: [/^ambi$/i] },
+            { name: 'キャリコネ', variants: ['キャリコネ'], fuzzy: [] },
+            { name: 'ギークリー', variants: ['ギークリー', 'ギークリ'], fuzzy: [/ギークリ/] },
+            { name: 'Findy', variants: ['findy'], fuzzy: [/^findy$/i] },
+            { name: 'ムービン', variants: ['ムービン', 'ムーヴィン'], fuzzy: [/ムービン/] },
+            { name: 'コトラ', variants: ['コトラ'], fuzzy: [] },
+            { name: 'CxOサーチ', variants: ['cxoサーチ', 'cxo'], fuzzy: [/cxo/i] },
+            { name: 'Professional Bank', variants: ['professional bank', 'professionalbank'], fuzzy: [/professional\s*bank/i] },
+            { name: '縄文アソシエイツ', variants: ['縄文アソシエイツ'], fuzzy: [] },
+            { name: 're就活', variants: ['re就活'], fuzzy: [/re就活/i] },
+            { name: 'ハイパーダイレクトスカウト', variants: ['ハイパーダイレクトスカウト'], fuzzy: [] },
+            { name: 'AXISコンサルティング', variants: ['axisエージェント', 'axis'], fuzzy: [/axis.{0,5}(エージェント|agent)/i] },
+            { name: 'コンコード', variants: ['コンコード'], fuzzy: [] },
+            { name: 'インスパイア', variants: ['インスパイア'], fuzzy: [] },
+            { name: 'パーソル', variants: ['パーソル', 'パーソルキャリア'], fuzzy: [/パーソル/] },
+            { name: 'レイノス', variants: ['レイノス'], fuzzy: [] },
+        ];
+
+        // ================================================================
+        // 「その他・総称」にまとめる（サービス固有名ではない一般的表現）
+        // ================================================================
+        const GENERIC_TERMS_RE = /^(ヘッドハンティング|ヘッドハンター|ヘッドハント|ベッドハンティング|ヘットハンティング|転職エージェント|転職支援|転職ナビ|転職サイト|転職|スカウト|スカウトサービス|スカウト会社|求人オファー|マッチング|マッチングサービス|エージェント|外資系|高額案件|高収入|高給料|高年収|年収[^\s]*|管理職|管理職ポストの転職|部長.*転職|社長.*転職|取締役|ハイクラス(転職|の転職|向け転職|案件)?|エグゼクティブ(転職|案件|案内|案件の紹介)?|ハイマネジメント|非公開求人|個人対応|個別対応|シニア対応|CxOクラス|リテイナーサーチ|サーチファーム|ハイプロ|ダイレクトリクルーティング|支援|ハイ転職|専門性|即戦力|求人|クラス|スタッフサービス)$/i;
+
+        // 不明・無効（集計から除外）とみなすパターン
+        const INVALID_RE = /^(なし|とくに|特に|ない|無い|無し|なきか|なき|なさ|わから|分から|解ら|判ら|わかな|思い(出せ|浮かば|つか|付か|きらない|ません)|知(ら|りません)|しらな|ありません|ありがとう|よろしく|不明|ふめい|none|ok|nan|使いやす|ナッシング|興味ない|何も知らな|ハードルが高|検討したい|多々ある|全部|プラチナ|高い$|高額$|即戦力$|ハイクラス$|です$|ます$|いたします|覚えてな|浮かばな|です。|ます。|ないです|ないです。|ない。|しらない|しらなし|興味な|とくにな$|よく知らな|いろいろ|リクエスト|時なし|転機|不動産|東レ|楽天|Amazon|Google|LINE|au|ソニー|サントリー|旭化成|ベンツ|サイバーエージェント|タウンワーク|バイトル|日清食品|じゃらん|はたらいく|日経キャリア|日経|ロビー|万パワー|メビウス|コスパフォーマンス|タイプ$|ラウンジ$|チーム$|カーバー|サイマル|マリナビ都電|タイタン$|バラク|クリアファイル|とらーゆ|パラジウム|ベンチアウティ|ダービン|ファイヤーエイメッカー|雰囲気|好きではない|ずっと同じ人が|昇給できる|厳選された求人|資料が多い|使いやすい|ハードルが高い|ありがとうございます|わかりません。|知らないです|知らない|今すぐに出ない|分かりません|特に思い浮かびません|特に何も浮かばない|すぐには思い浮かびません|年収いくら|中途採用|エグゼクティブ案件の紹介|管理職向け転職|よろしくお願いいたします|らなななな|かやかやかやか|なまなわなわなわなわなわな|あいでや|やたやたやたやたやたやたやたやた|ベンダウディ|たやたやて|らのっぼ窶怩|zj丑mxl|Jvuuggf|Vuuvvuvuc|t k k|いxkcm|わにやな|なさわざな|なんさわさなわさかわ|りしょうかつ|邦文と連絡|高年収$|やたやた|なななな|まなまはなまなな)$/i;
+
+        // Lookup map
+        const LOOKUP = new Map();
+        for (const rule of SERVICE_DICT) {
+            for (const v of rule.variants) {
+                LOOKUP.set(norm(v), rule.name);
+            }
+        }
+
+        const CAT_OTHER = 'その他';
+        const OTHER_VARIANTS = [
+            'その他', 'そのほか', '特になし', '特にない', '特にありません', 'ありません', 'なし', '無し',
+            'わからない', 'わかりません', '不明', '覚えていない', '思い出せない', '未回答', '未利用',
+            '利用していない', 'none', 'n/a', 'na', 'unknown', 'not sure', 'google', 'amazon', 'line', 'au',
+        ];
+        const OTHER_LOOKUP = new Set(OTHER_VARIANTS.map(v => norm(v).replace(/[./_-]/g, '')));
+        const NO_SELECTION_KEYS = new Set(['その他', '特にない']);
+        const PANEL_SERVICE_INDEX = {
+            1: 'JAC Recruitment',
+            2: 'CareerCross',
+            3: 'BizReach',
+            4: 'doda X',
+            5: 'LinkedIn',
+            6: 'RECRUIT DIRECT SCOUT',
+            7: 'ミドルの転職',
+            8: 'doda',
+            9: 'LHH転職エージェント',
+            10: 'KOTORA',
+            11: 'ムービン・ストラテジック・キャリア',
+            12: 'KREIS',
+            13: 'アクシスコンサルティング',
+            14: 'RECRUIT AGENT',
+            15: 'Robert Walters',
+            16: 'Hays',
+            17: 'Michael Page',
+        };
+        const AWARENESS_OPTION_INDEX = {
+            1: 'JAC Recruitment',
+            2: 'CareerCross',
+            3: 'doda X',
+            4: 'ミドルの転職',
+            5: 'RECRUIT DIRECT SCOUT',
+            6: 'RECRUIT AGENT',
+            7: 'マイナビエージェント',
+            8: 'Randstad',
+            9: 'BizReach',
+            10: 'LHH転職エージェント',
+            11: 'KOTORA',
+            12: 'ムービン・ストラテジック・キャリア',
+            13: 'KREIS',
+            14: 'Robert Walters',
+            15: 'Michael Page',
+            16: 'Hays',
+            17: 'RGF',
+            18: 'en world',
+            19: 'AMBI',
+            20: 'ANTELOPE CAREER CONSULTING',
+            21: 'MS Agent by MS-Japan',
+            22: 'Geekly',
+            23: 'パソナキャリア',
+            24: 'タイズ',
+            25: '転機',
+            26: 'doda',
+            27: 'LinkedIn',
+            28: 'アクシスコンサルティング',
+            29: 'その他',
+            30: '特にない',
+        };
+        const CHANNEL_OPTION_INDEX = {
+            1: 'TVCM',
+            2: 'TV番組',
+            3: 'ラジオ',
+            4: '雑誌',
+            5: '新聞',
+            6: 'チラシ',
+            7: 'ダイレクトメール',
+            8: '交通広告',
+            9: 'タクシー広告',
+            10: '屋外広告',
+            11: '検索結果',
+            12: 'Web広告',
+            13: '企業サイト',
+            14: 'Webニュース',
+            15: '動画配信コンテンツ',
+            16: '動画サービス内広告',
+            17: 'YouTube広告',
+            18: 'YouTubeコンテンツ',
+            19: 'SNS投稿',
+            20: 'SNS広告',
+            21: 'LinkedIn',
+            22: 'スカウトメール',
+            23: '企業SNSアカウント',
+            24: 'Web口コミ・ブログ',
+            25: 'セミナー',
+            26: '友人・知人',
+            27: 'その他',
+            28: '特にない',
+        };
+        const RECOGNITION_LABELS = { 1: '内容まで知っている', 2: '名前は知っている', 3: '知らない' };
+        const INTEREST_LABELS = { 1: 'とても興味がある', 2: '興味がある', 3: 'どちらともいえない', 4: '興味がない', 5: 'まったく興味がない' };
+        const USAGE_LABELS = { 1: 'とても利用したい', 2: '利用したい', 3: 'どちらともいえない', 4: '利用したくない', 5: 'まったく利用したくない' };
+        const PANEL_LABEL_LOOKUP = new Map([
+            ...Object.values(PANEL_SERVICE_INDEX),
+            ...Object.values(AWARENESS_OPTION_INDEX).filter(v => !NO_SELECTION_KEYS.has(v)),
+        ].map(name => [norm(name), name]));
+        const AWARENESS_ENTRIES = Object.entries(AWARENESS_OPTION_INDEX).filter(([, service]) => !NO_SELECTION_KEYS.has(service));
+        const PANEL_SERVICE_ENTRIES = Object.entries(PANEL_SERVICE_INDEX);
+        const CHANNEL_ENTRIES = Object.entries(CHANNEL_OPTION_INDEX).filter(([, label]) => !NO_SELECTION_KEYS.has(label));
+
+        function createServiceFocusEntry() {
+            return {
+                q1First: 0,
+                q1Total: 0,
+                q1Ranks: [0, 0, 0, 0, 0],
+                q2First: 0,
+                q2Total: 0,
+                q2Ranks: [0, 0, 0, 0, 0],
+                score: 0,
+                both: 0,
+                q1Only: 0,
+                q2Only: 0,
+                coAny: {},
+                coQ1: {},
+                coQ2: {},
+                survey: {
+                    q3Aware: 0,
+                    q4Aware: 0,
+                    q34Aware: 0,
+                    recognition: { 1: 0, 2: 0, 3: 0 },
+                    interest: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                    usage: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+                    channels: {},
+                },
+            };
+        }
+
+        function ensureFocusEntry(services, service) {
+            if (!services[service]) services[service] = createServiceFocusEntry();
+            return services[service];
+        }
+
+        function incrementMap(dict, key, amount = 1) {
+            if (!key) return;
+            dict[key] = (dict[key] || 0) + amount;
+        }
+
+        function orderedUnique(values) {
+            const seen = new Set();
+            return values.filter(v => {
+                if (!v || seen.has(v)) return false;
+                seen.add(v);
+                return true;
+            });
+        }
+
+        function incrementPairMaps(values, field, services, weight = 1) {
+            for (let i = 0; i < values.length; i++) {
+                for (let j = i + 1; j < values.length; j++) {
+                    const a = values[i];
+                    const b = values[j];
+                    incrementMap(ensureFocusEntry(services, a)[field], b, weight);
+                    incrementMap(ensureFocusEntry(services, b)[field], a, weight);
+                }
+            }
+        }
+
+        function truthyAnswer(value) {
+            if (value === null || value === undefined || value === '') return false;
+            const s = String(value).trim().toLowerCase();
+            return !['0', 'false', 'f', 'off', 'no', 'n'].includes(s);
+        }
+
+        function numericAnswer(value) {
+            if (value === null || value === undefined || value === '') return null;
+            const num = Number(String(value).trim());
+            return Number.isFinite(num) ? num : null;
+        }
+
+        function getHeaderIndexMap(headers) {
+            const map = new Map();
+            headers.forEach((header, idx) => {
+                const key = String(header || '').trim();
+                if (key && !map.has(key)) map.set(key, idx);
+            });
+            return map;
+        }
+
+        function rowValueByHeader(row, headerMap, header) {
+            const idx = headerMap.get(header);
+            return idx === undefined ? '' : row[idx];
+        }
+
+        function existingHeaders(headerMap, names) {
+            return names.filter(name => headerMap.has(name));
+        }
+
+        function isOtherAnswer(text, normalizedKey) {
+            const compact = (normalizedKey || norm(text)).replace(/[./_-]/g, '');
+            if (OTHER_LOOKUP.has(compact)) return true;
+            return /^(その他|そのほか|特にな[いし]|特にありません|ありません|なし|無し|わからない|わかりません|不明|覚えていない|思い出せない|未回答|未利用|利用していない|unknown|n\/?a|none|notsure)$/i.test(text)
+                || /^(google|amazon|line|au)$/i.test(compact);
+        }
+
+        function normalizeText(raw) {
+            if (raw === null || raw === undefined || raw === '') return null;
+            const s = String(raw).trim();
+            if (!s) return null;
+            const normalizedKey = norm(s);
+            if (isOtherAnswer(s, normalizedKey)) return CAT_OTHER;
+            if (PANEL_LABEL_LOOKUP.has(normalizedKey)) return PANEL_LABEL_LOOKUP.get(normalizedKey);
+
+            const sc = s.replace(/[\s　]/g, '');
+
+            // 完全に無効なテキスト（集計対象外）
+            if (INVALID_RE.test(sc) || INVALID_RE.test(s)) return null;
+
+            // ランダム・ノイズ判定
+            if (/(.)\1{4,}/.test(sc)) return null;                          // 同一文字連続5以上
+            if (/^[ぁ-ん]{1,3}$/.test(sc) && !/^(えん|えんにし)$/.test(sc)) return null; // 短いひらがな
+            if (/^[a-z0-9]{1,3}$/i.test(sc)) return null;                   // 3文字以下の英数字
+            if (/^[ぁ-んァ-ン一-龯]{1}$/.test(sc)) return null;             // 1文字の日本語
+            // 長い繰り返し（やたやたやた…）
+            if (/^(.{1,5})\1{3,}$/.test(sc)) return null;
+
+            // NFKC正規化キー
+            const key = normalizedKey;
+
+            // 辞書完全一致
+            if (LOOKUP.has(key)) return LOOKUP.get(key);
+
+            // ファジーマッチ
+            for (const rule of SERVICE_DICT) {
+                for (const re of rule.fuzzy) {
+                    if (re.test(s) || re.test(key)) return rule.name;
+                }
+            }
+
+            // 総称・一般用語 → その他・総称バケット
+            if (GENERIC_TERMS_RE.test(sc) || GENERIC_TERMS_RE.test(s)) return CAT_OTHER;
+
+            // 残り：文字数が2文字以上あればそのまま保持（未知サービス名）
+            // ただし純粋な英文記号列や無意味な文字列はドロップ
+            if (sc.length < 2) return null;
+            if (/^[!-/:-@[-`{-~]+$/.test(sc)) return null; // 全部記号
+            if (/^[a-z]{3,}$/.test(key) && !/(recruit|doda|jac|biz|link|indeed|hays|ambi|findy)/i.test(key)) {
+                // 辞書未登録の3文字以上英字で主要KWなし → null
+                if (sc.length <= 5) return null;
+            }
+
+            return s;
+        }
+
+        // =====================================================================
+        // EXTRACTION
+        // =====================================================================
+        function createStatsAccumulator(totalRows) {
+            return {
+                respondentCount: Math.max(totalRows - 1, 0),
+                meaningfulRespondentCount: 0,
+                q1: { s1: {}, total: {} },
+                q2: { s1: {}, total: {} },
+                focus: { services: {} },
+            };
+        }
+
+        function buildExtractionContext(rows) {
+            const headers = rows[0] || [];
+            const headerMap = getHeaderIndexMap(headers);
+            const q1Headers = existingHeaders(headerMap, ['Q1S1FA', 'Q1S2FA', 'Q1S3FA', 'Q1S4FA', 'Q1S5FA']);
+            const q2Headers = existingHeaders(headerMap, ['Q2S1FA', 'Q2S2FA', 'Q2S3FA', 'Q2S4FA', 'Q2S5FA']);
+            const awarenessQ3Indexes = AWARENESS_ENTRIES
+                .map(([option, service]) => ({ idx: headerMap.get(`Q3_${option}`), service }))
+                .filter(item => item.idx !== undefined);
+            const awarenessQ4Indexes = AWARENESS_ENTRIES
+                .map(([option, service]) => ({ idx: headerMap.get(`Q4_${option}`), service }))
+                .filter(item => item.idx !== undefined);
+            const serviceQuestionIndexes = PANEL_SERVICE_ENTRIES.map(([serviceNo, service]) => ({
+                service,
+                recognitionIdx: headerMap.get(`Q5S${serviceNo}`),
+                interestIdx: headerMap.get(`Q7S${serviceNo}`),
+                usageIdx: headerMap.get(`Q8S${serviceNo}`),
+                channelIndexes: CHANNEL_ENTRIES
+                    .map(([channelNo, label]) => ({ idx: headerMap.get(`Q6S${serviceNo}_${channelNo}`), label }))
+                    .filter(item => item.idx !== undefined),
+            }));
+            return {
+                q1Indexes: q1Headers.length ? q1Headers.map(h => headerMap.get(h)) : [14, 15, 16, 17, 18],
+                q2Indexes: q2Headers.length ? q2Headers.map(h => headerMap.get(h)) : [19, 20, 21, 22, 23],
+                q3OtherIndex: headerMap.get('Q3_29FA'),
+                q4OtherIndex: headerMap.get('Q4_29FA'),
+                awarenessQ3Indexes,
+                awarenessQ4Indexes,
+                serviceQuestionIndexes,
+                ageidIdx: headerMap.get('AGEID'),
+                sexIdx: headerMap.get('SEX'),
+                sq3Idx: headerMap.get('SQ3'),
+                sq4Idx: headerMap.get('SQ4'),
+                sq5Idx: headerMap.get('SQ5'),
+                wbIdx: headerMap.get('WB') ?? headers.length - 1,
+            };
+        }
+
+        function processSurveyRow(row, stats, context, weight = 1) {
+            const { q1Indexes, q2Indexes, q3OtherIndex, q4OtherIndex, awarenessQ3Indexes, awarenessQ4Indexes, serviceQuestionIndexes } = context;
+            const q1Ordered = [];
+            const q2Ordered = [];
+
+            for (const idx of q1Indexes) {
+                const v = normalizeText(row[idx]);
+                if (!v) continue;
+                q1Ordered.push(v);
+                incrementMap(stats.q1.total, v, weight);
+            }
+
+            for (const idx of q2Indexes) {
+                const v = normalizeText(row[idx]);
+                if (!v) continue;
+                q2Ordered.push(v);
+                incrementMap(stats.q2.total, v, weight);
+            }
+
+            const q1s1 = q1Ordered[0];
+            const q2s1 = q2Ordered[0];
+            if (q1s1) incrementMap(stats.q1.s1, q1s1, weight);
+            if (q2s1) incrementMap(stats.q2.s1, q2s1, weight);
+
+            const q1Unique = orderedUnique(q1Ordered.filter(v => v !== CAT_OTHER));
+            const q2Unique = orderedUnique(q2Ordered.filter(v => v !== CAT_OTHER));
+            if (q1Unique.length || q2Unique.length) stats.meaningfulRespondentCount += weight;
+
+            const q1RankMap = new Map();
+            q1Ordered.forEach((service, idx) => {
+                if (service === CAT_OTHER || q1RankMap.has(service)) return;
+                q1RankMap.set(service, idx);
+            });
+            q1RankMap.forEach((idx, service) => {
+                const entry = ensureFocusEntry(stats.focus.services, service);
+                entry.q1Total += weight;
+                entry.q1Ranks[idx] += weight;
+                entry.score += (5 - idx) * weight;
+            });
+
+            const q2RankMap = new Map();
+            q2Ordered.forEach((service, idx) => {
+                if (service === CAT_OTHER || q2RankMap.has(service)) return;
+                q2RankMap.set(service, idx);
+            });
+            q2RankMap.forEach((idx, service) => {
+                const entry = ensureFocusEntry(stats.focus.services, service);
+                entry.q2Total += weight;
+                entry.q2Ranks[idx] += weight;
+                entry.score += (5 - idx) * weight;
+            });
+
+            if (q1s1 && q1s1 !== CAT_OTHER) ensureFocusEntry(stats.focus.services, q1s1).q1First += weight;
+            if (q2s1 && q2s1 !== CAT_OTHER) ensureFocusEntry(stats.focus.services, q2s1).q2First += weight;
+
+            const allServices = orderedUnique([...q1Unique, ...q2Unique]);
+            const q1Set = new Set(q1Unique);
+            const q2Set = new Set(q2Unique);
+            allServices.forEach(service => {
+                const entry = ensureFocusEntry(stats.focus.services, service);
+                const inQ1 = q1Set.has(service);
+                const inQ2 = q2Set.has(service);
+                if (inQ1 && inQ2) entry.both += weight;
+                else if (inQ1) entry.q1Only += weight;
+                else if (inQ2) entry.q2Only += weight;
+            });
+
+            incrementPairMaps(allServices, 'coAny', stats.focus.services, weight);
+            incrementPairMaps(q1Unique, 'coQ1', stats.focus.services, weight);
+            incrementPairMaps(q2Unique, 'coQ2', stats.focus.services, weight);
+
+            const awareQ3 = new Set();
+            const awareQ4 = new Set();
+            for (const item of awarenessQ3Indexes) {
+                if (truthyAnswer(row[item.idx])) awareQ3.add(item.service);
+            }
+            for (const item of awarenessQ4Indexes) {
+                if (truthyAnswer(row[item.idx])) awareQ4.add(item.service);
+            }
+            const q3Other = normalizeText(q3OtherIndex === undefined ? '' : row[q3OtherIndex]);
+            const q4Other = normalizeText(q4OtherIndex === undefined ? '' : row[q4OtherIndex]);
+            if (q3Other && q3Other !== CAT_OTHER && !NO_SELECTION_KEYS.has(q3Other)) awareQ3.add(q3Other);
+            if (q4Other && q4Other !== CAT_OTHER && !NO_SELECTION_KEYS.has(q4Other)) awareQ4.add(q4Other);
+            [...new Set([...awareQ3, ...awareQ4])].forEach(service => {
+                const survey = ensureFocusEntry(stats.focus.services, service).survey;
+                if (awareQ3.has(service)) survey.q3Aware += weight;
+                if (awareQ4.has(service)) survey.q4Aware += weight;
+                survey.q34Aware += weight;
+            });
+
+            for (const item of serviceQuestionIndexes) {
+                const entry = ensureFocusEntry(stats.focus.services, item.service);
+                const survey = entry.survey;
+
+                const recognition = numericAnswer(item.recognitionIdx === undefined ? '' : row[item.recognitionIdx]);
+                if (recognition && RECOGNITION_LABELS[recognition]) survey.recognition[recognition] += weight;
+
+                const interest = numericAnswer(item.interestIdx === undefined ? '' : row[item.interestIdx]);
+                if (interest && INTEREST_LABELS[interest]) survey.interest[interest] += weight;
+
+                const usage = numericAnswer(item.usageIdx === undefined ? '' : row[item.usageIdx]);
+                if (usage && USAGE_LABELS[usage]) survey.usage[usage] += weight;
+
+                for (const channel of item.channelIndexes) {
+                    if (truthyAnswer(row[channel.idx])) incrementMap(survey.channels, channel.label, weight);
+                }
+            }
+
+            return stats;
+        }
+
+        function extractStats(rows) {
+            const stats = createStatsAccumulator(rows.length);
+            const context = buildExtractionContext(rows);
+            for (let i = 1; i < rows.length; i++) {
+                processSurveyRow(rows[i] || [], stats, context);
+            }
+            return stats;
+        }
+
+        async function extractStatsAsync(rows, onProgress) {
+            const stats = createStatsAccumulator(rows.length);
+            const context = buildExtractionContext(rows);
+            const total = Math.max(rows.length - 1, 0);
+            const batchSize = total > 20000 ? 1200 : 600;
+            let lastProgressAt = 0;
+
+            if (onProgress) onProgress(0, total);
+            for (let start = 1; start < rows.length; start += batchSize) {
+                const end = Math.min(start + batchSize, rows.length);
+                for (let i = start; i < end; i++) {
+                    processSurveyRow(rows[i] || [], stats, context);
+                }
+                if (onProgress) {
+                    const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+                    if (end >= rows.length || now - lastProgressAt >= 80) {
+                        onProgress(end - 1, total);
+                        lastProgressAt = now;
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            return stats;
+        }
+
+        async function extractFilteredStatsAsync(rows, tabKey, onProgress) {
+            const context = buildExtractionContext(rows);
+            const filter = TAB_FILTERS[tabKey];
+            // First pass: count filtered rows
+            let filteredCount = 0;
+            const filteredIndexes = [];
+            for (let i = 1; i < rows.length; i++) {
+                if (filter.test(rows[i] || [], context)) {
+                    filteredIndexes.push(i);
+                    filteredCount++;
+                }
+            }
+
+            const stats = createStatsAccumulator(filteredCount + 1);
+            stats.respondentCount = filteredCount;
+            const wbStats = createStatsAccumulator(filteredCount + 1);
+            wbStats.respondentCount = filteredCount;
+
+            // Demographic cross-tab accumulator
+            const demoCtxMap = { sex: 'sexIdx', ageid: 'ageidIdx', sq3: 'sq3Idx', sq4: 'sq4Idx', sq5: 'sq5Idx' };
+            const demo = {};
+            const wbDemo = {};
+            for (const def of DEMO_DEFS) { demo[def.key] = {}; wbDemo[def.key] = {}; }
+
+            const total = filteredCount;
+            const batchSize = total > 20000 ? 1200 : 600;
+            let lastProgressAt = 0;
+            let wbN = 0;
+
+            if (onProgress) onProgress(0, total);
+            for (let start = 0; start < filteredIndexes.length; start += batchSize) {
+                const end = Math.min(start + batchSize, filteredIndexes.length);
+                for (let j = start; j < end; j++) {
+                    const row = rows[filteredIndexes[j]] || [];
+                    processSurveyRow(row, stats, context, 1);
+                    const wbVal = parseFloat(row[context.wbIdx]);
+                    if (wbVal && isFinite(wbVal)) {
+                        processSurveyRow(row, wbStats, context, wbVal);
+                        wbN += wbVal;
+                    }
+
+                    // Demographic Q1/Q2 cross-tab (lightweight)
+                    const q1Vals = [], q2Vals = [];
+                    for (const idx of context.q1Indexes) { const v = normalizeText(row[idx]); if (v) q1Vals.push(v); }
+                    for (const idx of context.q2Indexes) { const v = normalizeText(row[idx]); if (v) q2Vals.push(v); }
+
+                    const hasWb = wbVal && isFinite(wbVal);
+
+                    for (const def of DEMO_DEFS) {
+                        const rawVal = numericAnswer(row[context[demoCtxMap[def.key]]]);
+                        if (!rawVal) continue;
+                        let catKey;
+                        if (def.groups) {
+                            const g = def.groups.find(gr => gr.test(rawVal));
+                            catKey = g ? g.label : null;
+                        } else {
+                            catKey = String(rawVal);
+                        }
+                        if (!catKey) continue;
+                        const bucket = demo[def.key][catKey] || (demo[def.key][catKey] = { n: 0, q1s1: {}, q1tot: {}, q2s1: {}, q2tot: {} });
+                        bucket.n += 1;
+                        for (let k = 0; k < q1Vals.length; k++) {
+                            incrementMap(bucket.q1tot, q1Vals[k], 1);
+                            if (k === 0) incrementMap(bucket.q1s1, q1Vals[k], 1);
+                        }
+                        for (let k = 0; k < q2Vals.length; k++) {
+                            incrementMap(bucket.q2tot, q2Vals[k], 1);
+                            if (k === 0) incrementMap(bucket.q2s1, q2Vals[k], 1);
+                        }
+                        if (hasWb) {
+                            const wBucket = wbDemo[def.key][catKey] || (wbDemo[def.key][catKey] = { n: 0, q1s1: {}, q1tot: {}, q2s1: {}, q2tot: {} });
+                            wBucket.n += wbVal;
+                            for (let k = 0; k < q1Vals.length; k++) {
+                                incrementMap(wBucket.q1tot, q1Vals[k], wbVal);
+                                if (k === 0) incrementMap(wBucket.q1s1, q1Vals[k], wbVal);
+                            }
+                            for (let k = 0; k < q2Vals.length; k++) {
+                                incrementMap(wBucket.q2tot, q2Vals[k], wbVal);
+                                if (k === 0) incrementMap(wBucket.q2s1, q2Vals[k], wbVal);
+                            }
+                        }
+                    }
+                }
+                if (onProgress) {
+                    const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+                    if (end >= filteredIndexes.length || now - lastProgressAt >= 80) {
+                        onProgress(end, total);
+                        lastProgressAt = now;
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            return {
+                ...stats,
+                wbQ1: wbStats.q1,
+                wbQ2: wbStats.q2,
+                wbN,
+                filteredCount,
+                demo,
+                wbDemo,
+            };
+        }
+
+        // =====================================================================
+        // STORAGE (tab-keyed: survey3_ir_YYYY-MM / survey3_mp_YYYY-MM)
+        // =====================================================================
+        const PREFIX = 'survey3_';
+        const TARGET_SERVICE = 'JAC Recruitment';
+        let currentTab = 'ir';
+        let tabState = {
+            ir: { mainMonth: '', cmpMonths: [], focusService: TARGET_SERVICE },
+            mp: { mainMonth: '', cmpMonths: [], focusService: TARGET_SERVICE },
+        };
+        const save = (tabKey, m, d) => localStorage.setItem(`${PREFIX}${tabKey}_${m}`, JSON.stringify(d));
+        const load = (tabKey, m) => { const s = localStorage.getItem(`${PREFIX}${tabKey}_${m}`); return s ? JSON.parse(s) : null; };
+        const allMonths = (tabKey) => {
+            const prefix = `${PREFIX}${tabKey}_`;
+            const r = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k.startsWith(prefix)) r.push(k.slice(prefix.length));
+            }
+            return r.sort();
+        };
+        // Clean up old keys (survey3_YYYY-MM without tab prefix)
+        (function cleanupOldKeys() {
+            const oldKeyPattern = /^survey3_(\d{4}-\d{2})$/;
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (k && oldKeyPattern.test(k)) localStorage.removeItem(k);
+            }
+        })();
+
+        // =====================================================================
+        // TAB FILTERS
+        // =====================================================================
+        const TAB_FILTERS = {
+            ir: {
+                label: '広報・IR',
+                desc: '25-64歳 / 年収600万+ / 転職意向or経験者',
+                test: (row, ctx) => {
+                    const age = numericAnswer(row[ctx.ageidIdx]);
+                    const inc = numericAnswer(row[ctx.sq3Idx]);
+                    const intent = numericAnswer(row[ctx.sq5Idx]);
+                    return age >= 4 && age <= 11 && inc >= 5 && inc <= 17 && intent >= 1 && intent <= 6;
+                }
+            },
+            mp: {
+                label: 'MP',
+                desc: '25-54歳 / 年収800万+ / 転職意向者',
+                test: (row, ctx) => {
+                    const age = numericAnswer(row[ctx.ageidIdx]);
+                    const inc = numericAnswer(row[ctx.sq3Idx]);
+                    const intent = numericAnswer(row[ctx.sq5Idx]);
+                    return age >= 4 && age <= 9 && inc >= 7 && inc <= 17 && intent >= 1 && intent <= 5;
+                }
+            }
+        };
+
+        // =====================================================================
+        // DEMOGRAPHIC DEFINITIONS
+        // =====================================================================
+        const DEMO_DEFS = [
+            {
+                key: 'sex', header: 'SEX', label: '性別',
+                labels: { 1: '男性', 2: '女性' }
+            },
+            {
+                key: 'ageid', header: 'AGEID', label: '年齢',
+                labels: { 1: '12才未満', 2: '12-19才', 3: '20-24才', 4: '25-29才', 5: '30-34才',
+                          6: '35-39才', 7: '40-44才', 8: '45-49才', 9: '50-54才', 10: '55-59才', 11: '60才以上' }
+            },
+            {
+                key: 'sq3', header: 'SQ3', label: '年収',
+                groups: [
+                    { label: '〜600万未満', test: v => v >= 1 && v <= 4 },
+                    { label: '600〜800万', test: v => v >= 5 && v <= 6 },
+                    { label: '800〜1000万', test: v => v >= 7 && v <= 8 },
+                    { label: '1000〜1500万', test: v => v >= 9 && v <= 13 },
+                    { label: '1500万以上', test: v => v >= 14 && v <= 17 },
+                    { label: 'わからない/答えたくない', test: v => v >= 18 }
+                ]
+            },
+            {
+                key: 'sq4', header: 'SQ4', label: '役職',
+                labels: { 1: '役員クラス以上', 2: '本部長・事業部長クラス', 3: '部長クラス',
+                          4: '課長クラス', 5: '係長・主任クラス', 6: '一般社員', 7: '契約・派遣', 8: 'その他' }
+            },
+            {
+                key: 'sq5', header: 'SQ5', label: '転職意向',
+                labels: { 1: '3ヶ月以内', 2: '半年以内', 3: '1年以内',
+                          4: '2-3年以内', 5: '時期未定だが転職したい', 6: '転職なし(経験あり)', 7: '転職なし(経験なし)' }
+            }
+        ];
+        const DEMO_COLORS = ['#6366f1cc', '#8b5cf6cc', '#ec4899cc', '#f97316cc', '#10b981cc'];
+
+        // =====================================================================
+        // CHARTS
+        // =====================================================================
+        Chart.register(ChartDataLabels);
+        const CHARTS = {};
+        const PAL = ['#4f46e5', '#0891b2', '#059669', '#d97706', '#dc2626', '#7c3aed', '#db2777', '#0284c7', '#65a30d', '#6d28d9'];
+
+        function topN(dict, n = 10) { return Object.entries(dict).filter(([k]) => k !== CAT_OTHER).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k); }
+        function setChartOtherNote(canvasId, count) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const wrap = canvas.closest('.chart-wrap');
+            if (!wrap) return;
+            let note = wrap.querySelector('.other-note');
+            if (count > 0) {
+                if (!note) {
+                    note = document.createElement('div');
+                    note.className = 'other-note';
+                    wrap.appendChild(note);
+                }
+                note.style.cssText = 'position:absolute;bottom:4px;right:10px;font-size:10px;color:#9ca3af;';
+                note.textContent = `※ その他: ${count}件`;
+            } else if (note) {
+                note.remove();
+            }
+        }
+
+        function mergedTopN(dicts, n = 10) {
+            const m = {};
+            dicts.flat().forEach(d => { for (const [k, v] of Object.entries(d)) { if (k !== CAT_OTHER) m[k] = (m[k] || 0) + v; } });
+            return topN(m, n);
+        }
+
+        function formatPct(value, base) {
+            if (!base) return '0.0%';
+            return `${((value / base) * 100).toFixed(1)}%`;
+        }
+
+        function formatDelta(current, previous) {
+            const diff = current - previous;
+            if (!diff) return '前月比 ±0';
+            return `前月比 ${diff > 0 ? '+' : ''}${diff}`;
+        }
+
+        function focusServices(data) {
+            return Object.entries(data?.focus?.services || {})
+                .filter(([service, entry]) => service && service !== CAT_OTHER && (
+                    entry.q1Total || entry.q2Total || entry.survey?.q34Aware ||
+                    Object.values(entry.survey?.recognition || {}).some(v => v > 0) ||
+                    Object.values(entry.survey?.interest || {}).some(v => v > 0) ||
+                    Object.values(entry.survey?.usage || {}).some(v => v > 0)
+                ))
+                .sort((a, b) => {
+                    const as = a[1].survey || {};
+                    const bs = b[1].survey || {};
+                    const av = (a[1].q1First + a[1].q2First) * 8 + a[1].score + a[1].both * 3 + a[1].q1Total + a[1].q2Total + (as.q34Aware || 0) + ((as.interest?.[1] || 0) + (as.interest?.[2] || 0));
+                    const bv = (b[1].q1First + b[1].q2First) * 8 + b[1].score + b[1].both * 3 + b[1].q1Total + b[1].q2Total + (bs.q34Aware || 0) + ((bs.interest?.[1] || 0) + (bs.interest?.[2] || 0));
+                    return bv - av;
+                })
+                .map(([service]) => service);
+        }
+
+        function makeBar(id, labels, datasets, opts = {}) {
+            if (CHARTS[id]) CHARTS[id].destroy();
+            const pct = opts.pctMode;
+            CHARTS[id] = new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: datasets.length > 1, position: 'top', labels: { font: { size: 11 }, padding: 8, boxWidth: 12 } },
+                        datalabels: { color: '#374151', anchor: 'end', align: 'right', font: { weight: '700', size: 11 },
+                            formatter: v => v > 0 ? (pct ? v.toFixed(1) + '%' : v) : '' }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 }, callback: pct ? (v => v + '%') : undefined } },
+                        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function makeDemoBar(canvasId, categories, datasets) {
+            if (CHARTS[canvasId]) CHARTS[canvasId].destroy();
+            CHARTS[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+                type: 'bar',
+                data: { labels: categories, datasets },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top', labels: { font: { size: 10 }, padding: 6, boxWidth: 10 } },
+                        datalabels: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { callback: v => v + '%', font: { size: 10 } }, grid: { color: '#f3f4f6' } },
+                        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // Get ordered category keys for a demo def (respects label order or group order)
+        function getDemoCatKeys(def, buckets) {
+            if (def.groups) return def.groups.map(g => g.label).filter(k => buckets[k]);
+            const keys = Object.keys(buckets).map(Number).sort((a, b) => a - b);
+            return keys.map(String);
+        }
+
+        // Get display label for a category key
+        function getDemoCatLabel(def, catKey) {
+            if (def.groups) return catKey; // already a label
+            return (def.labels && def.labels[catKey]) || catKey;
+        }
+
+        function renderDemoChart(qKey, demoKey, demoData, wbDemoData) {
+            const def = DEMO_DEFS.find(d => d.key === demoKey);
+            if (!def) return;
+            const buckets = demoData[demoKey] || {};
+            const catKeys = getDemoCatKeys(def, buckets);
+            if (!catKeys.length) return;
+
+            const categories = catKeys.map(k => `${getDemoCatLabel(def, k)} (N=${(buckets[k]?.n || 0)})`);
+
+            // Find top 5 services across all categories for this question
+            const s1Key = qKey + 's1', totKey = qKey + 'tot';
+            const globalTot = {};
+            for (const ck of catKeys) {
+                const b = buckets[ck];
+                if (!b) continue;
+                for (const [svc, cnt] of Object.entries(b[totKey] || {})) {
+                    if (svc === CAT_OTHER) continue;
+                    globalTot[svc] = (globalTot[svc] || 0) + cnt;
+                }
+            }
+            const topServices = Object.entries(globalTot).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
+
+            // Build datasets for S1 chart
+            const s1Datasets = topServices.map((svc, i) => ({
+                label: svc,
+                data: catKeys.map(ck => {
+                    const b = buckets[ck];
+                    if (!b || !b.n) return 0;
+                    return +((b[s1Key][svc] || 0) / b.n * 100).toFixed(1);
+                }),
+                backgroundColor: DEMO_COLORS[i % DEMO_COLORS.length],
+            }));
+            makeDemoBar(`${qKey}DemoS1Chart`, categories, s1Datasets);
+
+            // Build datasets for Total chart
+            const totDatasets = topServices.map((svc, i) => ({
+                label: svc,
+                data: catKeys.map(ck => {
+                    const b = buckets[ck];
+                    if (!b || !b.n) return 0;
+                    return +((b[totKey][svc] || 0) / b.n * 100).toFixed(1);
+                }),
+                backgroundColor: DEMO_COLORS[i % DEMO_COLORS.length],
+            }));
+            makeDemoBar(`${qKey}DemoTotChart`, categories, totDatasets);
+
+            // Build cross-tab table helper
+            function buildDemoTableHtml(tableBuckets, tableCatKeys, tableTop10, isWb) {
+                const headHtml = `<tr class="text-left text-xs text-gray-400 border-b border-gray-100 uppercase tracking-wide">
+                    <th class="py-2 pr-4">${def.label}</th><th class="py-2 px-3 text-right">N</th>
+                    ${tableTop10.map(s => `<th class="py-2 px-3 text-right">${s}</th>`).join('')}
+                </tr>`;
+                const bodyHtml = tableCatKeys.map(ck => {
+                    const b = tableBuckets[ck];
+                    if (!b || !b.n) return '';
+                    const nDisplay = isWb ? b.n.toFixed(1) : b.n;
+                    return `<tr>
+                        <td class="py-1.5 pr-4 font-medium">${getDemoCatLabel(def, ck)}</td>
+                        <td class="py-1.5 px-3 text-right text-gray-500">${nDisplay}</td>
+                        ${tableTop10.map(s => {
+                            const cnt = b[totKey][s] || 0;
+                            if (cnt <= 0) return '<td class="py-1.5 px-3 text-right">-</td>';
+                            const pct = (cnt / b.n * 100).toFixed(1);
+                            const cntDisplay = isWb ? cnt.toFixed(1) : cnt;
+                            return `<td class="py-1.5 px-3 text-right">${pct}% <span class="text-gray-400 text-[10px]">(${cntDisplay})</span></td>`;
+                        }).join('')}
+                    </tr>`;
+                }).join('');
+                return { headHtml, bodyHtml };
+            }
+
+            // Normal table
+            const top10 = Object.entries(globalTot).filter(([k]) => k !== CAT_OTHER).sort((a, b) => b[1] - a[1]).slice(0, 10).map(e => e[0]);
+            const thead = document.getElementById(`${qKey}DemoTableHead`);
+            const tbody = document.getElementById(`${qKey}DemoTableBody`);
+            const normal = buildDemoTableHtml(buckets, catKeys, top10, false);
+            thead.innerHTML = normal.headHtml;
+            tbody.innerHTML = normal.bodyHtml;
+
+            // WB table
+            const wbTableEl = document.getElementById(`${qKey}DemoWbTable`);
+            if (wbTableEl && wbDemoData) {
+                const wbBuckets = wbDemoData[demoKey] || {};
+                const wbCatKeys = getDemoCatKeys(def, wbBuckets);
+                if (wbCatKeys.length) {
+                    const wbGlobalTot = {};
+                    for (const ck of wbCatKeys) {
+                        const b = wbBuckets[ck];
+                        if (!b) continue;
+                        for (const [svc, cnt] of Object.entries(b[totKey] || {})) {
+                            if (svc === CAT_OTHER) continue;
+                            wbGlobalTot[svc] = (wbGlobalTot[svc] || 0) + cnt;
+                        }
+                    }
+                    const wbTop10 = Object.entries(wbGlobalTot).filter(([k]) => k !== CAT_OTHER).sort((a, b) => b[1] - a[1]).slice(0, 10).map(e => e[0]);
+                    const wb = buildDemoTableHtml(wbBuckets, wbCatKeys, wbTop10, true);
+                    wbTableEl.querySelector('thead').innerHTML = wb.headHtml;
+                    wbTableEl.querySelector('tbody').innerHTML = wb.bodyHtml;
+                    wbTableEl.closest('.wb-demo-section').classList.remove('hidden');
+                } else {
+                    wbTableEl.closest('.wb-demo-section').classList.add('hidden');
+                }
+            }
+        }
+
+        function renderDemoCrossTab(qKey, demoData, wbDemoData) {
+            const tabContainer = document.getElementById(`${qKey}DemoTabs`);
+            const activeClasses = ['bg-teal-50', 'border-teal-300', 'text-teal-700'];
+            const inactiveClasses = ['bg-white', 'border-gray-200', 'text-gray-500', 'hover:bg-gray-50'];
+            tabContainer.innerHTML = DEMO_DEFS.map((def, i) =>
+                `<button class="demo-tab-btn px-3 py-1.5 rounded-full text-xs font-semibold border transition
+                 ${i === 0 ? activeClasses.join(' ') : inactiveClasses.join(' ')}"
+                 data-demo-key="${def.key}" data-q="${qKey}">${def.label}</button>`
+            ).join('');
+
+            tabContainer.addEventListener('click', e => {
+                const btn = e.target.closest('.demo-tab-btn');
+                if (!btn) return;
+                tabContainer.querySelectorAll('.demo-tab-btn').forEach(b => {
+                    b.classList.remove(...activeClasses);
+                    b.classList.add(...inactiveClasses);
+                });
+                btn.classList.remove(...inactiveClasses);
+                btn.classList.add(...activeClasses);
+                renderDemoChart(qKey, btn.dataset.demoKey, demoData, wbDemoData);
+            });
+
+            // Render default (first attribute)
+            renderDemoChart(qKey, DEMO_DEFS[0].key, demoData, wbDemoData);
+        }
+
+        function makeLine(id, labels, serviceMap) {
+            if (CHARTS[id]) CHARTS[id].destroy();
+            const datasets = Object.entries(serviceMap).map(([svc, vals], i) => ({
+                label: svc, data: vals,
+                borderColor: PAL[i % PAL.length],
+                backgroundColor: PAL[i % PAL.length] + '25',
+                tension: .35, pointRadius: 5, pointHoverRadius: 7, fill: false, borderWidth: 2.5
+            }));
+            CHARTS[id] = new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'line', data: { labels, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
+                        datalabels: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // =====================================================================
+        // RENDER ANALYSIS
+        // =====================================================================
+        // 比較モード用: 月をX軸、サービスを系列にした折れ線グラフ
+        function makeComparisonLine(id, months, topKeys, allData) {
+            if (CHARTS[id]) CHARTS[id].destroy();
+            // allData: [{month, dict}]
+            const datasets = topKeys.map((svc, i) => ({
+                label: svc,
+                data: allData.map(({ dict }) => dict[svc] || 0),
+                borderColor: PAL[i % PAL.length],
+                backgroundColor: PAL[i % PAL.length] + '20',
+                tension: 0.3,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                borderWidth: 2.5,
+                fill: false,
+            }));
+            CHARTS[id] = new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'line',
+                data: { labels: months, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } },
+                        datalabels: {
+                            display: true,
+                            align: 'top',
+                            font: { weight: '700', size: 10 },
+                            color: ctx => PAL[ctx.datasetIndex % PAL.length],
+                            formatter: v => v > 0 ? v.toFixed(1) + '%' : ''
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: (items) => {
+                                    // 増減を表示
+                                    const lines = [];
+                                    items.forEach(item => {
+                                        const vals = item.dataset.data;
+                                        const idx = item.dataIndex;
+                                        if (idx > 0) {
+                                            const diff = vals[idx] - vals[idx - 1];
+                                            const sign = diff > 0 ? '+' : '';
+                                            lines.push(`  ${item.dataset.label}: ${sign}${diff.toFixed(1)}pp 前月比`);
+                                        }
+                                    });
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        function buildTargetMonthRows(months = allMonths(currentTab)) {
+            return [...months].sort().map(month => {
+                const data = load(currentTab, month);
+                const entry = data?.focus?.services?.[TARGET_SERVICE];
+                const survey = entry?.survey || createServiceFocusEntry().survey;
+                const base = data?.meaningfulRespondentCount || data?.respondentCount || 0;
+                const reach = entry ? entry.q1Only + entry.q2Only + entry.both : 0;
+                const first = entry ? entry.q1First + entry.q2First : 0;
+                const mentions = entry ? entry.q1Total + entry.q2Total : 0;
+                const q1Reach = entry?.q1Total || 0;
+                const q2Reach = entry?.q2Total || 0;
+                const q1First = entry?.q1First || 0;
+                const q2First = entry?.q2First || 0;
+                const q3Aware = survey.q3Aware || 0;
+                const q4Aware = survey.q4Aware || 0;
+                const recognition = (survey.recognition?.[1] || 0) + (survey.recognition?.[2] || 0);
+                const interest = (survey.interest?.[1] || 0) + (survey.interest?.[2] || 0);
+                const usage = (survey.usage?.[1] || 0) + (survey.usage?.[2] || 0);
+                return {
+                    month,
+                    base,
+                    entry,
+                    survey,
+                    reach,
+                    first,
+                    mentions,
+                    q1: q1Reach,
+                    q2: q2Reach,
+                    q1First,
+                    q2First,
+                    q3Aware,
+                    q4Aware,
+                    aware: survey.q34Aware || 0,
+                    recognition,
+                    interest,
+                    usage,
+                    avgScore: reach ? (entry.score / reach).toFixed(2) : '0.00',
+                    reachShare: formatPct(reach, base),
+                    firstRate: formatPct(first, mentions),
+                    q1ReachShare: formatPct(q1Reach, base),
+                    q2ReachShare: formatPct(q2Reach, base),
+                    q1FirstRate: formatPct(q1First, q1Reach),
+                    q2FirstRate: formatPct(q2First, q2Reach),
+                    q3AwareRate: formatPct(q3Aware, base),
+                    q4AwareRate: formatPct(q4Aware, base),
+                    awareRate: formatPct(survey.q34Aware || 0, base),
+                    usageRate: formatPct(usage, base),
+                    bothRate: formatPct(entry?.both || 0, reach),
+                };
+            });
+        }
+
+        function renderAnalysisCompareChips(months, mainMonth) {
+            const box = document.getElementById('analysisCompareMonths');
+            const hint = document.getElementById('analysisCompareHint');
+            if (!box || !hint) return;
+            box.innerHTML = '';
+            const state = tabState[currentTab];
+            const others = months.filter(month => month !== mainMonth).sort().reverse();
+            state.cmpMonths = (state.cmpMonths || []).filter(month => others.includes(month));
+
+            if (!mainMonth) {
+                hint.textContent = '基準月を選ぶと比較月を追加できます。';
+                return;
+            }
+            if (!others.length) {
+                hint.textContent = '比較できる月はまだありません。';
+                return;
+            }
+
+            others.forEach(month => {
+                const isActive = state.cmpMonths.includes(month);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.month = month;
+                button.className = isActive
+                    ? 'rounded-full border border-indigo-600 bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white'
+                    : 'rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:border-indigo-300 hover:text-indigo-600';
+                button.textContent = month;
+                button.addEventListener('click', () => {
+                    if (state.cmpMonths.includes(month)) {
+                        state.cmpMonths = state.cmpMonths.filter(value => value !== month);
+                    } else {
+                        state.cmpMonths = [...state.cmpMonths, month].sort();
+                    }
+                    renderAnalysisCompareChips(months, mainMonth);
+                    refreshDashboard(mainMonth);
+                });
+                box.appendChild(button);
+            });
+
+            hint.textContent = state.cmpMonths.length
+                ? `比較中: ${state.cmpMonths.join(', ')}`
+                : '比較月を選ぶと単月表示から比較表示に切り替わります。';
+        }
+
+        function updateSelectors(selectMonth) {
+            const months = allMonths(currentTab);
+            const analysisSel = document.getElementById('analysisMonthSelect');
+            const state = tabState[currentTab];
+            const targetMonth = months.includes(selectMonth)
+                ? selectMonth
+                : (months.includes(state.mainMonth) ? state.mainMonth : (months.at(-1) || ''));
+
+            if (analysisSel) {
+                analysisSel.innerHTML = months.map(month => `<option value="${month}">${month}</option>`).join('') || '<option value="">--</option>';
+                analysisSel.value = targetMonth;
+            }
+
+            state.mainMonth = targetMonth;
+            renderAnalysisCompareChips(months, targetMonth);
+
+            const chips = document.getElementById('savedChips');
+            // Show all months across both tabs
+            const allIr = allMonths('ir');
+            const allMp = allMonths('mp');
+            const allUnique = [...new Set([...allIr, ...allMp])].sort();
+            chips.innerHTML = allUnique.map(month => `<span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-white/20 text-white border border-white/30">${month}</span>`).join('');
+
+            const tabBar = document.getElementById('tabBar');
+            tabBar.classList.toggle('hidden', allUnique.length === 0);
+        }
+
+        function renderEmptyFocusState(message) {
+            document.getElementById('focusServiceSubtitle').textContent = message;
+            document.getElementById('focusQuestionRefs').innerHTML = '';
+            document.getElementById('focusMetricGrid').innerHTML = `
+                <div class="col-span-full rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-400 text-center">
+                    ${message}
+                </div>`;
+            document.querySelector('#focusMatrixTable tbody').innerHTML = '';
+            document.querySelector('#focusCoTable tbody').innerHTML = '';
+            document.querySelector('#focusSurveyTable tbody').innerHTML = '';
+            document.querySelector('#focusCompareTable tbody').innerHTML = '';
+            ['focusRankChart', 'focusCoChart', 'focusFunnelChart', 'focusChannelChart', 'focusAttitudeChart'].forEach(id => {
+                if (CHARTS[id]) {
+                    CHARTS[id].destroy();
+                    CHARTS[id] = null;
+                }
+            });
+        }
+
+        function setUploadVisualState(state, detail = '') {
+            const card = document.getElementById('uploadCard');
+            const zone = document.getElementById('dropZone');
+            const fileName = document.getElementById('fileName');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            card.classList.remove('upload-card-active', 'upload-card-success', 'ring-2', 'ring-red-200', 'bg-red-50/40', 'ring-emerald-200', 'bg-emerald-50/30');
+            zone.classList.remove('border-emerald-400', 'bg-emerald-50', 'border-red-300', 'bg-red-50', 'border-indigo-400');
+            fileName.classList.remove('text-emerald-600', 'text-red-500', 'font-semibold');
+            analyzeBtn.classList.remove('animate-pulse', 'ring-2', 'ring-indigo-300');
+
+            if (state === 'fileReady') {
+                card.classList.add('ring-2', 'ring-emerald-200', 'bg-emerald-50/30');
+                zone.classList.add('border-emerald-400', 'bg-emerald-50');
+                fileName.classList.add('text-emerald-600', 'font-semibold');
+                analyzeBtn.classList.add('animate-pulse', 'ring-2', 'ring-indigo-300');
+                if (detail) fileName.textContent = detail;
+                return;
+            }
+            if (state === 'loading') {
+                card.classList.add('upload-card-active');
+                zone.classList.add('border-indigo-400');
+                fileName.classList.add('font-semibold');
+                if (detail) fileName.textContent = detail;
+                return;
+            }
+            if (state === 'success') {
+                card.classList.add('upload-card-success');
+                zone.classList.add('border-emerald-400', 'bg-emerald-50');
+                fileName.classList.add('text-emerald-600', 'font-semibold');
+                if (detail) fileName.textContent = detail;
+                return;
+            }
+            if (state === 'error') {
+                card.classList.add('ring-2', 'ring-red-200', 'bg-red-50/40');
+                zone.classList.add('border-red-300', 'bg-red-50');
+                fileName.classList.add('text-red-500', 'font-semibold');
+                if (detail) fileName.textContent = detail;
+                return;
+            }
+            fileName.textContent = detail || (document.getElementById('uploadFile').files[0]?.name || 'xlsx / xls / csv');
+        }
+
+        function renderFocusSection(mainMonth, cmpMonths, requestedService = '') {
+            const md = load(currentTab, mainMonth);
+            if (!md) return renderEmptyFocusState('表示する月次データがありません');
+
+            const select = document.getElementById('focusServiceSelect');
+            select.innerHTML = `<option value="${TARGET_SERVICE}">${TARGET_SERVICE}</option>`;
+            select.value = TARGET_SERVICE;
+            select.disabled = true;
+            select.classList.add('opacity-70', 'cursor-not-allowed');
+            tabState[currentTab].focusService = TARGET_SERVICE;
+
+            const entry = md.focus?.services?.[TARGET_SERVICE];
+            if (!entry) return renderEmptyFocusState(`${TARGET_SERVICE} の集計結果がまだありません`);
+
+            const respondentBase = md.meaningfulRespondentCount || md.respondentCount || 0;
+            const q1Reach = entry.q1Total || 0;
+            const q2Reach = entry.q2Total || 0;
+            const uniqueReach = entry.q1Only + entry.q2Only + entry.both;
+            const q1First = entry.q1First || 0;
+            const q2First = entry.q2First || 0;
+            const averageScore = uniqueReach ? (entry.score / uniqueReach).toFixed(2) : '0.00';
+            const survey = entry.survey || createServiceFocusEntry().survey;
+            const q3Aware = survey.q3Aware || 0;
+            const q4Aware = survey.q4Aware || 0;
+            const promptedAware = survey.q34Aware || 0;
+            const recognitionStrong = (survey.recognition?.[1] || 0) + (survey.recognition?.[2] || 0);
+            const interestPositive = (survey.interest?.[1] || 0) + (survey.interest?.[2] || 0);
+            const usagePositive = (survey.usage?.[1] || 0) + (survey.usage?.[2] || 0);
+
+            document.getElementById('focusServiceSubtitle').textContent = `${mainMonth} の ${TARGET_SERVICE} を固定対象として表示しています。`;
+            document.getElementById('focusQuestionRefs').innerHTML = [
+                'Q1S1FA-Q1S5FA: ハイクラス領域の自由想起',
+                'Q2S1FA-Q2S5FA: エグゼクティブ領域の自由想起',
+                'Q3_1 / Q4_1 / Q3_29FA / Q4_29FA: JAC Recruitment の認知',
+                'Q5S1: 認知段階。1-2 を強い認知として表示',
+                'Q6S1_*: 接触チャネル',
+                'Q7S1: 関心度。1-2 を前向きとして表示',
+                'Q8S1: 利用意向。1-2 を前向きとして表示',
+            ].map(line => `<div>${line}</div>`).join('');
+
+            document.getElementById('focusMetricGrid').innerHTML = [
+                { label: 'Q1自由想起人数', value: q1Reach, sub: `Q1 で想起 ${formatPct(q1Reach, respondentBase)}` },
+                { label: 'Q2自由想起人数', value: q2Reach, sub: `Q2 で想起 ${formatPct(q2Reach, respondentBase)}` },
+                { label: 'Q1第一想起人数', value: q1First, sub: `Q1 の S1 ${formatPct(q1First, q1Reach)}` },
+                { label: 'Q2第一想起人数', value: q2First, sub: `Q2 の S1 ${formatPct(q2First, q2Reach)}` },
+                { label: 'Q3設問認知', value: q3Aware, sub: `Q3 で認知 ${formatPct(q3Aware, respondentBase)}` },
+                { label: 'Q4設問認知', value: q4Aware, sub: `Q4 で認知 ${formatPct(q4Aware, respondentBase)}` },
+                { label: '関心人数', value: interestPositive, sub: `Q7 の 1-2 ${formatPct(interestPositive, respondentBase)}` },
+                { label: '利用意向', value: usagePositive, sub: `Q8 の 1-2 ${formatPct(usagePositive, respondentBase)}` },
+                { label: '両領域想起率', value: formatPct(entry.both, uniqueReach), sub: `Q1/Q2 の両方で想起 ${entry.both} 人` },
+                { label: '認知率', value: formatPct(recognitionStrong, respondentBase), sub: 'Q5 の 1-2 合計' },
+                { label: '平均スコア', value: averageScore, sub: 'S1=5点, S5=1点の平均' },
+            ].map(card => `
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-4">
+                    <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">${card.label}</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-2">${card.value}</div>
+                    <div class="text-xs text-gray-500 mt-1">${card.sub}</div>
+                </div>`).join('');
+
+            makeBar('focusRankChart', ['S1', 'S2', 'S3', 'S4', 'S5'], [
+                { label: 'Q1', data: entry.q1Ranks, backgroundColor: '#4f46e5cc', borderRadius: 5 },
+                { label: 'Q2', data: entry.q2Ranks, backgroundColor: '#9333eacc', borderRadius: 5 },
+            ]);
+
+            const coRows = Object.entries(entry.coAny || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            makeBar('focusCoChart', coRows.map(([service]) => service), [{
+                label: '併記数',
+                data: coRows.map(([, count]) => count),
+                backgroundColor: '#0f766ecc',
+                borderRadius: 5,
+            }]);
+
+            makeBar('focusFunnelChart', ['Q1/Q2自由想起', 'Q3/Q4認知', 'Q5認知', 'Q7関心', 'Q8利用意向'], [{
+                label: '人数',
+                data: [uniqueReach, promptedAware, recognitionStrong, interestPositive, usagePositive],
+                backgroundColor: ['#1d4ed8cc', '#0f766ecc', '#6d28d9cc', '#d97706cc', '#dc2626cc'],
+                borderRadius: 5,
+            }]);
+
+            const channelRows = Object.entries(survey.channels || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            makeBar('focusChannelChart', channelRows.map(([label]) => label), [{
+                label: '接触数',
+                data: channelRows.map(([, count]) => count),
+                backgroundColor: '#0891b2cc',
+                borderRadius: 5,
+            }]);
+
+            makeBar('focusAttitudeChart', ['Q5-1', 'Q5-2', 'Q7-1', 'Q7-2', 'Q8-1', 'Q8-2'], [{
+                label: '人数',
+                data: [
+                    survey.recognition?.[1] || 0,
+                    survey.recognition?.[2] || 0,
+                    survey.interest?.[1] || 0,
+                    survey.interest?.[2] || 0,
+                    survey.usage?.[1] || 0,
+                    survey.usage?.[2] || 0,
+                ],
+                backgroundColor: ['#4f46e5cc', '#818cf8cc', '#d97706cc', '#f59e0bcc', '#dc2626cc', '#f87171cc'],
+                borderRadius: 5,
+            }]);
+
+            const neither = Math.max(respondentBase - uniqueReach, 0);
+            document.querySelector('#focusMatrixTable tbody').innerHTML = [
+                ['Q1あり', entry.both, entry.q1Only, entry.both + entry.q1Only],
+                ['Q1なし', entry.q2Only, neither, entry.q2Only + neither],
+                ['合計', entry.both + entry.q2Only, entry.q1Only + neither, respondentBase],
+            ].map((row, idx) => `
+                <tr class="${idx === 2 ? 'bg-gray-50 font-semibold text-gray-700' : 'hover:bg-slate-50 transition'}">
+                    <td class="py-2 pr-4">${row[0]}</td>
+                    <td class="py-2 px-3 text-right">${row[1]}</td>
+                    <td class="py-2 px-3 text-right">${row[2]}</td>
+                    <td class="py-2 px-3 text-right">${row[3]}</td>
+                </tr>`).join('');
+
+            document.querySelector('#focusCoTable tbody').innerHTML = (coRows.length ? coRows : [['該当なし', 0]]).map(([service, count]) => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2 pr-4 max-w-[220px] truncate" title="${service}">${service}</td>
+                    <td class="py-2 px-3 text-right font-semibold text-slate-800">${count}</td>
+                    <td class="py-2 px-3 text-right text-slate-500">${entry.coQ1?.[service] || 0}</td>
+                    <td class="py-2 px-3 text-right text-slate-500">${entry.coQ2?.[service] || 0}</td>
+                </tr>`).join('');
+
+            document.querySelector('#focusSurveyTable tbody').innerHTML = [
+                ['Q3 認知', q3Aware, formatPct(q3Aware, respondentBase), 'Q3 で認知'],
+                ['Q4 認知', q4Aware, formatPct(q4Aware, respondentBase), 'Q4 で認知'],
+                ['Q3/Q4 認知合計', promptedAware, formatPct(promptedAware, respondentBase), `Q3=${q3Aware} / Q4=${q4Aware}`],
+                ['Q5 認知', recognitionStrong, formatPct(recognitionStrong, respondentBase), `1:${survey.recognition?.[1] || 0} / 2:${survey.recognition?.[2] || 0}`],
+                ['Q7 関心', interestPositive, formatPct(interestPositive, respondentBase), `1:${survey.interest?.[1] || 0} / 2:${survey.interest?.[2] || 0}`],
+                ['Q8 利用意向', usagePositive, formatPct(usagePositive, respondentBase), `1:${survey.usage?.[1] || 0} / 2:${survey.usage?.[2] || 0}`],
+                ['主チャネル', channelRows[0]?.[1] || 0, respondentBase ? formatPct(channelRows[0]?.[1] || 0, respondentBase) : '0.0%', channelRows[0]?.[0] || '該当なし'],
+            ].map(row => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2 pr-4 font-medium text-gray-800">${row[0]}</td>
+                    <td class="py-2 px-3 text-right">${row[1]}</td>
+                    <td class="py-2 px-3 text-right">${row[2]}</td>
+                    <td class="py-2 px-3 text-right text-gray-500">${row[3]}</td>
+                </tr>`).join('');
+
+            const monthRows = buildTargetMonthRows([mainMonth, ...cmpMonths]);
+            document.querySelector('#focusCompareTable tbody').innerHTML = monthRows.map(row => `
+                <tr class="${row.month === mainMonth ? 'bg-indigo-50/60' : 'hover:bg-slate-50 transition'}">
+                    <td class="py-2 pr-4 font-medium text-gray-800">${row.month}</td>
+                    <td class="py-2 px-3 text-right">${row.q1}<span class="ml-1 text-[11px] text-gray-400">${row.q1ReachShare}</span></td>
+                    <td class="py-2 px-3 text-right">${row.q2}<span class="ml-1 text-[11px] text-gray-400">${row.q2ReachShare}</span></td>
+                    <td class="py-2 px-3 text-right">${row.q1First}<span class="ml-1 text-[11px] text-gray-400">${row.q1FirstRate}</span></td>
+                    <td class="py-2 px-3 text-right">${row.q2First}<span class="ml-1 text-[11px] text-gray-400">${row.q2FirstRate}</span></td>
+                    <td class="py-2 px-3 text-right">${row.q3Aware}<span class="ml-1 text-[11px] text-gray-400">${row.q3AwareRate}</span></td>
+                    <td class="py-2 px-3 text-right">${row.q4Aware}<span class="ml-1 text-[11px] text-gray-400">${row.q4AwareRate}</span></td>
+                    <td class="py-2 px-3 text-right">${row.usageRate}</td>
+                    <td class="py-2 px-3 text-right">${row.bothRate}</td>
+                    <td class="py-2 px-3 text-right font-semibold text-slate-800">${row.avgScore}</td>
+                </tr>`).join('');
+        }
+
+        function renderTableCompare(tableId, sortedMonths, monthDataMap, qKey) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            const thead = document.querySelector(`#${tableId} thead tr`);
+            tbody.innerHTML = '';
+            thead.querySelectorAll('.dyn').forEach(node => node.remove());
+
+            sortedMonths.forEach(month => {
+                ['S1', '合計'].forEach(label => {
+                    const th = document.createElement('th');
+                    th.className = 'dyn py-2 px-3 text-right';
+                    th.textContent = `${month} ${label}`;
+                    thead.appendChild(th);
+                });
+            });
+
+            const allKeys = new Set(sortedMonths.flatMap(month => Object.keys(monthDataMap[month]?.[qKey]?.total || {})));
+            const latestTotal = monthDataMap[sortedMonths.at(-1)]?.[qKey]?.total || {};
+            const sortedKeys = [...allKeys].filter(k => k !== CAT_OTHER).sort((a, b) => (latestTotal[b] || 0) - (latestTotal[a] || 0));
+
+            sortedKeys.forEach(key => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50 transition';
+                let row = `<td class="py-1.5 pr-5 font-medium text-gray-800 max-w-[220px] truncate" title="${key}">${key}</td>`;
+                sortedMonths.forEach((month, index) => {
+                    const s1 = monthDataMap[month]?.[qKey]?.s1?.[key] || 0;
+                    const total = monthDataMap[month]?.[qKey]?.total?.[key] || 0;
+                    let diffHtml = '';
+                    if (index > 0) {
+                        const prevTotal = monthDataMap[sortedMonths[index - 1]]?.[qKey]?.total?.[key] || 0;
+                        const diff = total - prevTotal;
+                        if (diff !== 0) diffHtml = `<span class="${diff > 0 ? 'text-emerald-600' : 'text-red-500'} text-xs font-bold ml-1">${diff > 0 ? '+' : ''}${diff}</span>`;
+                    }
+                    row += `<td class="py-1.5 px-3 text-right text-indigo-500">${s1}</td>`;
+                    row += `<td class="py-1.5 px-3 text-right font-bold text-indigo-800">${total}${diffHtml}</td>`;
+                });
+                tr.innerHTML = row;
+                tbody.appendChild(tr);
+            });
+
+            // その他 footnote
+            const latestOther = latestTotal[CAT_OTHER] || 0;
+            if (latestOther > 0) {
+                const table = document.getElementById(tableId);
+                let footnote = table.parentElement.querySelector('.other-footnote');
+                if (!footnote) { footnote = document.createElement('div'); footnote.className = 'other-footnote'; table.parentElement.appendChild(footnote); }
+                footnote.className = 'other-footnote text-right text-xs text-gray-400 mt-1 pr-2';
+                footnote.textContent = `※ その他: ${latestOther}件（最新月）`;
+            } else {
+                const table = document.getElementById(tableId);
+                const footnote = table.parentElement.querySelector('.other-footnote');
+                if (footnote) footnote.remove();
+            }
+        }
+
+        function renderTable(tableId, mainSet, cmpSets, cmpMonths, mainMonth, totalN) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            const thead = document.querySelector(`#${tableId} thead tr`);
+            tbody.innerHTML = '';
+            thead.querySelectorAll('.dyn').forEach(node => node.remove());
+
+            cmpSets.forEach((_, index) => {
+                ['S1', '合計'].forEach(label => {
+                    const th = document.createElement('th');
+                    th.className = 'dyn py-2 px-4 text-right';
+                    th.textContent = `${cmpMonths[index]} ${label}`;
+                    thead.appendChild(th);
+                });
+            });
+
+            const keys = new Set([...Object.keys(mainSet.total || {}), ...cmpSets.flatMap(set => Object.keys(set.total || {}))]);
+            const sortedKeys = [...keys].filter(k => k !== CAT_OTHER).sort((a, b) => (mainSet.total?.[b] || 0) - (mainSet.total?.[a] || 0));
+
+            sortedKeys.forEach(key => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50 transition';
+                const s1v = mainSet.s1?.[key] || 0;
+                const totv = mainSet.total?.[key] || 0;
+                let row = `<td class="py-1.5 pr-6 font-medium text-gray-800 max-w-[220px] truncate" title="${key}">${key}</td>`;
+                row += `<td class="py-1.5 px-4 text-right text-indigo-600">${s1v} <span class="text-[10px] text-gray-400">(${formatPct(s1v, totalN)})</span></td>`;
+                row += `<td class="py-1.5 px-4 text-right font-bold text-indigo-800">${totv} <span class="text-[10px] text-gray-400">(${formatPct(totv, totalN)})</span></td>`;
+                cmpSets.forEach(set => {
+                    row += `<td class="py-1.5 px-4 text-right text-gray-400">${set.s1?.[key] || 0}</td>`;
+                    row += `<td class="py-1.5 px-4 text-right text-gray-400">${set.total?.[key] || 0}</td>`;
+                });
+                tr.innerHTML = row;
+                tbody.appendChild(tr);
+            });
+
+            // その他 footnote
+            const otherCount = mainSet.total?.[CAT_OTHER] || 0;
+            if (otherCount > 0) {
+                const table = document.getElementById(tableId);
+                let footnote = table.parentElement.querySelector('.other-footnote');
+                if (!footnote) { footnote = document.createElement('div'); footnote.className = 'other-footnote'; table.parentElement.appendChild(footnote); }
+                footnote.className = 'other-footnote text-right text-xs text-gray-400 mt-1 pr-2';
+                footnote.textContent = `※ その他: ${otherCount}件`;
+            } else {
+                const table = document.getElementById(tableId);
+                const footnote = table.parentElement.querySelector('.other-footnote');
+                if (footnote) footnote.remove();
+            }
+        }
+
+        function renderRecallSummary(containerId, set, colorClass, totalN) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const topFirst = topN(set.s1, 1)[0] || '該当なし';
+            const topTotal = topN(set.total, 1)[0] || '該当なし';
+            const topFirstCount = set.s1?.[topFirst] || 0;
+            const topTotalCount = set.total?.[topTotal] || 0;
+            container.innerHTML = [
+                { label: '有効回答者数 (N)', value: totalN, sub: 'フィルタ適用後' },
+                { label: '第一想起トップ', value: topFirst, sub: `${topFirstCount}件 (${formatPct(topFirstCount, totalN)})` },
+                { label: '全体想起トップ', value: topTotal, sub: `${topTotalCount}件 (${formatPct(topTotalCount, totalN)})` },
+                { label: '第一想起率', value: formatPct(topFirstCount, totalN), sub: `${topFirst}` },
+            ].map(card => `
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                    <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">${card.label}</div>
+                    <div class="text-sm font-bold ${colorClass} mt-2 truncate" title="${card.value}">${card.value}</div>
+                    <div class="text-xs text-gray-500 mt-1">${card.sub}</div>
+                </div>`).join('');
+        }
+
+        function renderAnalysis(mainMonth, cmpMonths) {
+            const tab = currentTab;
+            const md = load(tab, mainMonth);
+            if (!md) return;
+            const totalN = md.filteredCount || md.respondentCount || 0;
+            const hasCompare = cmpMonths.length > 0;
+            const state = tabState[tab];
+            state.mainMonth = mainMonth;
+            state.cmpMonths = [...cmpMonths];
+
+            function toPct(dict, base) {
+                const r = {};
+                for (const [k, v] of Object.entries(dict || {})) r[k] = base ? (v / base * 100) : 0;
+                return r;
+            }
+
+            if (hasCompare) {
+                const allMonthsInView = [mainMonth, ...cmpMonths].sort();
+                const monthDataMap = {};
+                allMonthsInView.forEach(month => { monthDataMap[month] = load(tab, month); });
+
+                function buildCompLine(qKey, sKey) {
+                    const allData = allMonthsInView.map(month => {
+                        const d = monthDataMap[month];
+                        const base = d?.filteredCount || d?.respondentCount || 0;
+                        return { month, dict: toPct(d?.[qKey]?.[sKey], base) };
+                    });
+                    const merged = {};
+                    allData.forEach(({ dict }) => Object.entries(dict).forEach(([key, value]) => {
+                        merged[key] = (merged[key] || 0) + value;
+                    }));
+                    return { allData, topKeys: topN(merged, 8), xLabels: allMonthsInView };
+                }
+
+                const q1s1 = buildCompLine('q1', 's1');
+                const q1tot = buildCompLine('q1', 'total');
+                const q2s1 = buildCompLine('q2', 's1');
+                const q2tot = buildCompLine('q2', 'total');
+                makeComparisonLine('q1s1Chart', q1s1.xLabels, q1s1.topKeys, q1s1.allData);
+                makeComparisonLine('q1totChart', q1tot.xLabels, q1tot.topKeys, q1tot.allData);
+                makeComparisonLine('q2s1Chart', q2s1.xLabels, q2s1.topKeys, q2s1.allData);
+                makeComparisonLine('q2totChart', q2tot.xLabels, q2tot.topKeys, q2tot.allData);
+                renderTableCompare('q1Table', allMonthsInView, monthDataMap, 'q1');
+                renderTableCompare('q2Table', allMonthsInView, monthDataMap, 'q2');
+            } else {
+                const q1s1Pct = toPct(md.q1.s1, totalN);
+                const q1totPct = toPct(md.q1.total, totalN);
+                const q2s1Pct = toPct(md.q2.s1, totalN);
+                const q2totPct = toPct(md.q2.total, totalN);
+                makeBar('q1s1Chart', topN(md.q1.s1), [{ label: mainMonth, data: topN(md.q1.s1).map(key => q1s1Pct[key] || 0), backgroundColor: '#4f46e5cc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q1totChart', topN(md.q1.total), [{ label: mainMonth, data: topN(md.q1.total).map(key => q1totPct[key] || 0), backgroundColor: '#818cf8cc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q2s1Chart', topN(md.q2.s1), [{ label: mainMonth, data: topN(md.q2.s1).map(key => q2s1Pct[key] || 0), backgroundColor: '#9333eacc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q2totChart', topN(md.q2.total), [{ label: mainMonth, data: topN(md.q2.total).map(key => q2totPct[key] || 0), backgroundColor: '#c084fccc', borderRadius: 5 }], { pctMode: true });
+                renderTable('q1Table', md.q1, [], [], mainMonth, totalN);
+                renderTable('q2Table', md.q2, [], [], mainMonth, totalN);
+            }
+
+            // その他の件数をグラフ右下に注記
+            setChartOtherNote('q1s1Chart', md.q1?.s1?.[CAT_OTHER] || 0);
+            setChartOtherNote('q1totChart', md.q1?.total?.[CAT_OTHER] || 0);
+            setChartOtherNote('q2s1Chart', md.q2?.s1?.[CAT_OTHER] || 0);
+            setChartOtherNote('q2totChart', md.q2?.total?.[CAT_OTHER] || 0);
+
+            renderRecallSummary('q1RecallSummary', md.q1, 'text-indigo-700', totalN);
+            renderRecallSummary('q2RecallSummary', md.q2, 'text-purple-700', totalN);
+
+            // WB charts
+            const wbN = md.wbN || 0;
+            if (wbN > 0) {
+                const wbQ1s1Pct = toPct(md.wbQ1?.s1, wbN);
+                const wbQ1totPct = toPct(md.wbQ1?.total, wbN);
+                const wbQ2s1Pct = toPct(md.wbQ2?.s1, wbN);
+                const wbQ2totPct = toPct(md.wbQ2?.total, wbN);
+                const wbKeys1s1 = topN(md.wbQ1?.s1 || {});
+                const wbKeys1tot = topN(md.wbQ1?.total || {});
+                const wbKeys2s1 = topN(md.wbQ2?.s1 || {});
+                const wbKeys2tot = topN(md.wbQ2?.total || {});
+                makeBar('q1s1WbChart', wbKeys1s1, [{ label: 'WB加重', data: wbKeys1s1.map(k => wbQ1s1Pct[k] || 0), backgroundColor: '#d97706cc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q1totWbChart', wbKeys1tot, [{ label: 'WB加重', data: wbKeys1tot.map(k => wbQ1totPct[k] || 0), backgroundColor: '#f59e0bcc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q2s1WbChart', wbKeys2s1, [{ label: 'WB加重', data: wbKeys2s1.map(k => wbQ2s1Pct[k] || 0), backgroundColor: '#d97706cc', borderRadius: 5 }], { pctMode: true });
+                makeBar('q2totWbChart', wbKeys2tot, [{ label: 'WB加重', data: wbKeys2tot.map(k => wbQ2totPct[k] || 0), backgroundColor: '#f59e0bcc', borderRadius: 5 }], { pctMode: true });
+                setChartOtherNote('q1s1WbChart', md.wbQ1?.s1?.[CAT_OTHER] || 0);
+                setChartOtherNote('q1totWbChart', md.wbQ1?.total?.[CAT_OTHER] || 0);
+                setChartOtherNote('q2s1WbChart', md.wbQ2?.s1?.[CAT_OTHER] || 0);
+                setChartOtherNote('q2totWbChart', md.wbQ2?.total?.[CAT_OTHER] || 0);
+            }
+
+            renderFocusSection(mainMonth, cmpMonths, TARGET_SERVICE);
+            document.getElementById('tabContent_analysis').classList.remove('hidden');
+            document.getElementById('tabContent_timeline').classList.remove('hidden');
+
+            // Update filter banner
+            const filter = TAB_FILTERS[tab];
+            const banner = document.getElementById('filterBanner');
+            document.getElementById('filterBannerLabel').textContent = filter.label;
+            document.getElementById('filterBannerDesc').textContent = filter.desc;
+            document.getElementById('filterBannerN').textContent = `N=${totalN}`;
+            banner.classList.remove('hidden');
+
+            // Demographic cross-tab: lazy render on accordion open
+            if (md.demo) {
+                const demoData = md.demo;
+                const wbDemoData = md.wbDemo || null;
+                ['q1', 'q2'].forEach(qKey => {
+                    const details = document.getElementById(`${qKey}DemoDetails`);
+                    // Remove old listener by replacing node
+                    const clone = details.cloneNode(true);
+                    details.parentNode.replaceChild(clone, details);
+                    clone.addEventListener('toggle', function () {
+                        if (this.open) renderDemoCrossTab(qKey, demoData, wbDemoData);
+                    });
+                    // If already open, re-render
+                    if (clone.open) renderDemoCrossTab(qKey, demoData, wbDemoData);
+                });
+            }
+        }
+
+        function renderTimeline() {
+            const rows = buildTargetMonthRows();
+            const subtitle = document.getElementById('timelineSubtitle');
+            const empty = document.getElementById('timelineEmptyState');
+            const content = document.getElementById('timelineContent');
+            const tbody = document.querySelector('#timelineTable tbody');
+
+            if (rows.length < 2) {
+                subtitle.textContent = '複数月がそろうと JAC Recruitment の推移を表示します。';
+                empty.textContent = '現在は単月データのみです。2か月目以降をアップロードすると、Q1/Q2想起とQ3-Q8の推移がここに表示されます。';
+                empty.classList.remove('hidden');
+                content.classList.add('hidden');
+                tbody.innerHTML = '';
+                ['timelineRecallChart', 'timelineSurveyTrendChart'].forEach(id => {
+                    if (CHARTS[id]) {
+                        CHARTS[id].destroy();
+                        CHARTS[id] = null;
+                    }
+                });
+                return;
+            }
+
+            const latest = rows[rows.length - 1];
+            const prev = rows[rows.length - 2];
+            subtitle.textContent = 'JAC Recruitment の想起から利用意向までを月次で比較します。';
+            empty.classList.add('hidden');
+            content.classList.remove('hidden');
+            document.getElementById('timelineMetricGrid').innerHTML = [
+                { label: '最新月Q1想起', value: latest.q1, sub: formatDelta(latest.q1, prev.q1) },
+                { label: '最新月Q2想起', value: latest.q2, sub: formatDelta(latest.q2, prev.q2) },
+                { label: '最新月Q3認知', value: latest.q3Aware, sub: formatDelta(latest.q3Aware, prev.q3Aware) },
+                { label: '最新月Q4認知', value: latest.q4Aware, sub: formatDelta(latest.q4Aware, prev.q4Aware) },
+                { label: '最新月Q7関心', value: latest.interest, sub: formatDelta(latest.interest, prev.interest) },
+                { label: '最新月Q8利用意向', value: latest.usage, sub: formatDelta(latest.usage, prev.usage) },
+            ].map(card => `
+                <div class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-4">
+                    <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">${card.label}</div>
+                    <div class="text-2xl font-bold text-gray-900 mt-2">${card.value}</div>
+                    <div class="text-xs text-gray-500 mt-1">${card.sub}</div>
+                </div>`).join('');
+
+            makeLine('timelineRecallChart', rows.map(row => row.month), {
+                'Q1想起': rows.map(row => row.q1),
+                'Q2想起': rows.map(row => row.q2),
+                'Q1/Q2自由想起': rows.map(row => row.reach),
+            });
+            makeLine('timelineSurveyTrendChart', rows.map(row => row.month), {
+                'Q3認知': rows.map(row => row.q3Aware),
+                'Q4認知': rows.map(row => row.q4Aware),
+                'Q5認知': rows.map(row => row.recognition),
+                'Q7関心': rows.map(row => row.interest),
+                'Q8利用意向': rows.map(row => row.usage),
+            });
+
+            tbody.innerHTML = rows.map(row => `
+                <tr class="${row.month === tabState[currentTab].mainMonth ? 'bg-indigo-50/60' : 'hover:bg-slate-50 transition'}">
+                    <td class="py-2 pr-4 font-medium text-gray-800">${row.month}</td>
+                    <td class="py-2 px-3 text-right">${row.q1}</td>
+                    <td class="py-2 px-3 text-right">${row.q2}</td>
+                    <td class="py-2 px-3 text-right">${row.q3Aware}</td>
+                    <td class="py-2 px-3 text-right">${row.q4Aware}</td>
+                    <td class="py-2 px-3 text-right">${row.recognition}</td>
+                    <td class="py-2 px-3 text-right">${row.interest}</td>
+                    <td class="py-2 px-3 text-right">${row.usage}</td>
+                </tr>`).join('');
+        }
+
+        function switchTab(tab) {
+            // tab is 'ir' or 'mp'
+            currentTab = tab;
+            document.getElementById('tabIr').classList.toggle('active', tab === 'ir');
+            document.getElementById('tabMp').classList.toggle('active', tab === 'mp');
+            updateSelectors(tabState[tab].mainMonth);
+            refreshDashboard(tabState[tab].mainMonth);
+        }
+
+        function refreshDashboard(preferredMonth = '') {
+            const months = allMonths(currentTab);
+            const state = tabState[currentTab];
+            const mainMonth = months.includes(preferredMonth)
+                ? preferredMonth
+                : (months.includes(state.mainMonth) ? state.mainMonth : (months.at(-1) || ''));
+            if (!mainMonth) {
+                document.getElementById('tabContent_analysis').classList.add('hidden');
+                document.getElementById('tabContent_timeline').classList.add('hidden');
+                document.getElementById('filterBanner').classList.add('hidden');
+                return;
+            }
+            state.mainMonth = mainMonth;
+            state.cmpMonths = (state.cmpMonths || []).filter(month => month !== mainMonth && months.includes(month)).sort();
+            const analysisMain = document.getElementById('analysisMonthSelect');
+            if (analysisMain) analysisMain.value = mainMonth;
+            renderAnalysisCompareChips(months, mainMonth);
+            renderAnalysis(mainMonth, state.cmpMonths);
+            renderTimeline();
+        }
+
+        function setUploadBusy(isBusy) {
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const uploadFile = document.getElementById('uploadFile');
+            const uploadMonth = document.getElementById('uploadMonth');
+            const dropZone = document.getElementById('dropZone');
+            analyzeBtn.disabled = isBusy;
+            analyzeBtn.classList.toggle('opacity-60', isBusy);
+            analyzeBtn.classList.toggle('cursor-not-allowed', isBusy);
+            uploadFile.disabled = isBusy;
+            uploadMonth.disabled = isBusy;
+            dropZone.classList.toggle('opacity-60', isBusy);
+            dropZone.classList.toggle('pointer-events-none', isBusy);
+            if (isBusy) setUploadVisualState('loading');
+        }
+
+        let _processStartTime = null;
+        let _elapsedTimer = null;
+
+        function _formatElapsed(ms) {
+            const s = Math.floor(ms / 1000);
+            return s < 60 ? `${s}秒` : `${Math.floor(s / 60)}分${s % 60}秒`;
+        }
+
+        function _startElapsedTimer() {
+            _processStartTime = performance.now();
+            const badge = document.getElementById('elapsedBadge');
+            badge.classList.remove('hidden');
+            badge.textContent = '経過: 0秒';
+            if (_elapsedTimer) clearInterval(_elapsedTimer);
+            _elapsedTimer = setInterval(() => {
+                badge.textContent = '経過: ' + _formatElapsed(performance.now() - _processStartTime);
+            }, 500);
+        }
+
+        function _stopElapsedTimer(final = false) {
+            if (_elapsedTimer) { clearInterval(_elapsedTimer); _elapsedTimer = null; }
+            const badge = document.getElementById('elapsedBadge');
+            if (final && _processStartTime) {
+                badge.textContent = '処理時間: ' + _formatElapsed(performance.now() - _processStartTime);
+            }
+        }
+
+        function showProgress(message, percent = null, detail = '', tone = 'blue') {
+            const el = document.getElementById('uploadStatus');
+            const toneClass = tone === 'red'
+                ? 'bg-red-50 text-red-700 border-red-100'
+                : tone === 'green'
+                    ? 'bg-green-50 text-green-700 border-green-100'
+                    : 'bg-slate-50 text-slate-700 border-slate-200';
+            const safePercent = percent === null ? null : Math.max(0, Math.min(100, Math.round(percent)));
+            el.className = `rounded-xl border px-3 py-3 ${toneClass}`;
+            el.innerHTML = `
+                <div class="flex items-center justify-between gap-3 text-xs font-semibold">
+                    <span>${message}</span>
+                    ${safePercent === null ? '' : `<span>${safePercent}%</span>`}
+                </div>
+                ${detail ? `<div class="mt-1 text-[11px] opacity-80">${detail}</div>` : ''}
+                ${safePercent === null ? '' : `
+                    <div class="mt-2 h-2 rounded-full bg-white/70 overflow-hidden">
+                        <div class="h-full rounded-full ${tone === 'green' ? 'bg-green-500' : tone === 'red' ? 'bg-red-500' : 'bg-indigo-500'} transition-all duration-200" style="width:${safePercent}%"></div>
+                    </div>`}
+            `;
+            el.classList.remove('hidden');
+            if (tone === 'red') { setUploadVisualState('error'); _stopElapsedTimer(); }
+            if (tone === 'green') _stopElapsedTimer(true);
+        }
+
+        function showStatus(msg, color) {
+            const el = document.getElementById('uploadStatus');
+            el.className = `text-xs rounded-lg px-3 py-2 font-medium ${color === 'green' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setUploadVisualState(color === 'green' ? 'success' : 'error');
+        }
+
+        function detectCsvEncoding(buffer) {
+            const bytes = new Uint8Array(buffer);
+            // BOM check
+            if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return 'utf-8';
+            // Try to validate as UTF-8 first (scan up to 8KB)
+            const scanLen = Math.min(bytes.length, 8192);
+            let isValidUtf8 = true;
+            let hasHighBytes = false;
+            for (let i = 0; i < scanLen; i++) {
+                const b = bytes[i];
+                if (b < 0x80) continue;
+                hasHighBytes = true;
+                let expected = 0;
+                if ((b & 0xE0) === 0xC0) expected = 1;
+                else if ((b & 0xF0) === 0xE0) expected = 2;
+                else if ((b & 0xF8) === 0xF0) expected = 3;
+                else { isValidUtf8 = false; break; }
+                for (let j = 1; j <= expected; j++) {
+                    if (i + j >= scanLen || (bytes[i + j] & 0xC0) !== 0x80) { isValidUtf8 = false; break; }
+                }
+                if (!isValidUtf8) break;
+                i += expected;
+            }
+            if (isValidUtf8 && hasHighBytes) return 'utf-8';
+            // Check for Shift-JIS patterns
+            for (let i = 0; i < scanLen; i++) {
+                const b = bytes[i];
+                if ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)) {
+                    if (i + 1 < scanLen) {
+                        const b2 = bytes[i + 1];
+                        if ((b2 >= 0x40 && b2 <= 0x7E) || (b2 >= 0x80 && b2 <= 0xFC)) return 'shift-jis';
+                    }
+                }
+            }
+            return 'utf-8';
+        }
+
+        function readWorkbookRows(file, onProgress) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                const isCsv = /\.csv$/i.test(file.name);
+
+                reader.onprogress = event => {
+                    if (onProgress && event.lengthComputable) onProgress(event);
+                };
+                reader.onerror = () => reject(new Error('ファイルの読み込みに失敗しました'));
+                reader.onload = event => {
+                    try {
+                        let workbook;
+                        if (isCsv) {
+                            const buffer = event.target.result;
+                            const encoding = detectCsvEncoding(buffer);
+                            const decoder = new TextDecoder(encoding);
+                            const text = decoder.decode(buffer);
+                            workbook = XLSX.read(text, { type: 'string', raw: true });
+                        } else {
+                            workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
+                        }
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        resolve(rows);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // =====================================================================
+        // ENRICHED DATA (正規化列付きデータ) for download
+        // =====================================================================
+        let _enrichedHeaders = null;
+        let _enrichedRows = null;
+        let _enrichedFileName = '';
+
+        const FA_COLUMNS = [
+            'Q1S1FA', 'Q1S2FA', 'Q1S3FA', 'Q1S4FA', 'Q1S5FA',
+            'Q2S1FA', 'Q2S2FA', 'Q2S3FA', 'Q2S4FA', 'Q2S5FA',
+        ];
+
+        async function buildEnrichedData(rows, onProgress) {
+            if (!rows || rows.length < 2) return;
+            const headers = rows[0].map(h => String(h).trim());
+            const colCount = headers.length;
+
+            // Find FA column indexes (ascending order)
+            const faIndexes = [];
+            for (const col of FA_COLUMNS) {
+                const idx = headers.indexOf(col);
+                if (idx !== -1) faIndexes.push({ name: col, idx });
+            }
+            if (faIndexes.length === 0) return;
+            // Sort ascending for segment-copy approach
+            faIndexes.sort((a, b) => a.idx - b.idx);
+
+            // Pre-build new header using segment copies (no splice per row)
+            // Segments: [0..fa0.idx], correct0, [fa0.idx+1..fa1.idx], correct1, ...
+            const segStarts = []; // start index of each segment in original row
+            const segEnds = [];   // end index (exclusive) of each segment
+            const faOrigIdx = []; // original column index for each FA column
+
+            let cursor = 0;
+            for (const fa of faIndexes) {
+                segStarts.push(cursor);
+                segEnds.push(fa.idx + 1); // include the FA column itself
+                faOrigIdx.push(fa.idx);
+                cursor = fa.idx + 1;
+            }
+            // Remaining columns after last FA
+            segStarts.push(cursor);
+            segEnds.push(colCount);
+
+            // Build new headers once
+            const newHeaders = [];
+            for (let s = 0; s < faIndexes.length; s++) {
+                for (let c = segStarts[s]; c < segEnds[s]; c++) newHeaders.push(headers[c]);
+                newHeaders.push(faIndexes[s].name + '-Correct');
+            }
+            // Trailing segment
+            for (let c = segStarts[faIndexes.length]; c < segEnds[faIndexes.length]; c++) newHeaders.push(headers[c]);
+
+            const totalRows = rows.length - 1;
+            const newRows = new Array(totalRows);
+            const batchSize = totalRows > 20000 ? 2000 : 800;
+
+            for (let start = 0; start < totalRows; start += batchSize) {
+                const end = Math.min(start + batchSize, totalRows);
+                for (let r = start; r < end; r++) {
+                    const srcRow = rows[r + 1];
+                    const srcLen = srcRow ? srcRow.length : 0;
+                    const out = new Array(newHeaders.length);
+                    let outIdx = 0;
+
+                    for (let s = 0; s < faIndexes.length; s++) {
+                        // Copy segment
+                        for (let c = segStarts[s]; c < segEnds[s]; c++) {
+                            out[outIdx++] = c < srcLen ? srcRow[c] : '';
+                        }
+                        // Compute normalized value
+                        const raw = faOrigIdx[s] < srcLen ? srcRow[faOrigIdx[s]] : '';
+                        if (raw !== null && raw !== undefined && String(raw).trim() !== '') {
+                            const result = normalizeText(raw);
+                            out[outIdx++] = result !== null ? result : '';
+                        } else {
+                            out[outIdx++] = '';
+                        }
+                    }
+                    // Trailing segment
+                    for (let c = segStarts[faIndexes.length]; c < segEnds[faIndexes.length]; c++) {
+                        out[outIdx++] = c < srcLen ? srcRow[c] : '';
+                    }
+                    newRows[r] = out;
+                }
+                // Yield to UI thread for progress updates
+                if (onProgress) onProgress(end, totalRows);
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            _enrichedHeaders = newHeaders;
+            _enrichedRows = newRows;
+        }
+
+        function downloadEnrichedData() {
+            if (!_enrichedHeaders || !_enrichedRows) return;
+            const aoa = [_enrichedHeaders, ..._enrichedRows];
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            const now = new Date();
+            const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0');
+            const baseName = _enrichedFileName.replace(/\.[^.]+$/, '');
+            XLSX.writeFile(wb, `正規化結果_${baseName}_${dateStr}.xlsx`);
+        }
+
+        function wireAnalyzeButton() {
+            const oldBtn = document.getElementById('analyzeBtn');
+            const newBtn = oldBtn.cloneNode(true);
+            oldBtn.replaceWith(newBtn);
+            newBtn.addEventListener('click', handleAnalyzeUpload);
+        }
+
+        async function handleAnalyzeUpload() {
+            const file = document.getElementById('uploadFile').files[0];
+            const month = document.getElementById('uploadMonth').value;
+            if (!file) { showStatus('ファイルを選択してください', 'red'); return; }
+            if (!month) { showStatus('月を選択してください', 'red'); return; }
+
+            setUploadBusy(true);
+            setUploadVisualState('loading', `${file.name} を処理中`);
+            _startElapsedTimer();
+            showProgress('ファイルを読み込み中', 0, file.name);
+            try {
+                const rows = await readWorkbookRows(file, event => {
+                    showProgress(
+                        'ファイルを読み込み中',
+                        Math.min(20, (event.loaded / event.total) * 20),
+                        `${file.name} (${Math.round(event.loaded / 1024)}KB / ${Math.round(event.total / 1024)}KB)`
+                    );
+                });
+                showProgress('行データを準備中', 20, `${file.name} を解析しました`);
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                // Build enriched data with normalized columns for download
+                _enrichedFileName = file.name;
+                showProgress('正規化列を生成中', 20, `${Math.max(rows.length - 1, 0).toLocaleString()} 件を処理中`);
+                await buildEnrichedData(rows, (processed, total) => {
+                    const ratio = total ? processed / total : 1;
+                    showProgress('正規化列を生成中', 20 + ratio * 8, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                });
+
+                // IR extraction
+                showProgress('広報・IR集計中', 30, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
+                const irStats = await extractFilteredStatsAsync(rows, 'ir', (processed, total) => {
+                    const ratio = total ? processed / total : 1;
+                    showProgress('広報・IR集計中', 30 + ratio * 28, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                });
+
+                // MP extraction
+                showProgress('MP集計中', 60, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
+                const mpStats = await extractFilteredStatsAsync(rows, 'mp', (processed, total) => {
+                    const ratio = total ? processed / total : 1;
+                    showProgress('MP集計中', 60 + ratio * 28, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                });
+
+                showProgress('結果を保存中', 90, `${month} の集計結果を保存しています`);
+                await new Promise(resolve => setTimeout(resolve, 0));
+                save('ir', month, irStats);
+                save('mp', month, mpStats);
+
+                showProgress('画面を更新中', 97, 'ダッシュボードに反映しています');
+                updateSelectors(month);
+                refreshDashboard(month);
+                setUploadVisualState('success', `${month} を取込済み: ${file.name}`);
+                showProgress('処理完了', 100,
+                    `広報・IR: ${irStats.filteredCount} 件 / MP: ${mpStats.filteredCount} 件`, 'green');
+
+                // Show download button if enriched data is available
+                const dlBtn = document.getElementById('downloadEnrichedBtn');
+                if (_enrichedHeaders && _enrichedRows) dlBtn.classList.remove('hidden');
+            } catch (err) {
+                setUploadVisualState('error', `${file.name} の読込に失敗`);
+                showProgress('読み込みエラー', null, err.message, 'red');
+            } finally {
+                setUploadBusy(false);
+            }
+        }
+
+        // =====================================================================
+        // EVENT LISTENERS
+        // =====================================================================
+        document.getElementById('uploadFile').addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                const label = `${file.name} (${sizeMB}MB)`;
+                document.getElementById('fileName').textContent = label;
+                document.getElementById('uploadStatus').classList.add('hidden');
+                setUploadVisualState('fileReady', label);
+            } else {
+                document.getElementById('fileName').textContent = 'xlsx / xls / csv';
+                setUploadVisualState('idle');
+            }
+        });
+
+        document.getElementById('analysisMonthSelect').addEventListener('change', function () {
+            tabState[currentTab].mainMonth = this.value;
+            tabState[currentTab].cmpMonths = tabState[currentTab].cmpMonths.filter(month => month !== this.value);
+            refreshDashboard(this.value);
+        });
+
+        document.getElementById('analysisClearBtn').addEventListener('click', () => {
+            if (!confirm('保存済みデータをすべて削除しますか？')) return;
+            ['ir', 'mp'].forEach(tab => {
+                allMonths(tab).forEach(month => localStorage.removeItem(`${PREFIX}${tab}_${month}`));
+            });
+            tabState = {
+                ir: { mainMonth: '', cmpMonths: [], focusService: TARGET_SERVICE },
+                mp: { mainMonth: '', cmpMonths: [], focusService: TARGET_SERVICE },
+            };
+            updateSelectors('');
+            ['tabContent_analysis', 'tabContent_timeline'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('tabBar').classList.add('hidden');
+            document.getElementById('filterBanner').classList.add('hidden');
+            document.getElementById('uploadStatus').classList.add('hidden');
+            setUploadVisualState('idle', 'xlsx / xls / csv');
+        });
+
+        document.getElementById('focusServiceSelect').addEventListener('change', function () {
+            tabState[currentTab].focusService = this.value;
+            if (!tabState[currentTab].mainMonth) return;
+            renderFocusSection(tabState[currentTab].mainMonth, tabState[currentTab].cmpMonths, this.value);
+        });
+
+
+        // Drag & Drop
+        const dropZoneEl = document.getElementById('dropZone');
+        dropZoneEl.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZoneEl.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+        dropZoneEl.addEventListener('dragleave', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZoneEl.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+        dropZoneEl.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZoneEl.classList.remove('border-indigo-500', 'bg-indigo-50');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                const uploadInput = document.getElementById('uploadFile');
+                uploadInput.files = files;
+                uploadInput.dispatchEvent(new Event('change'));
+            }
+        });
+
+        // =====================================================================
+        // INIT
+        // =====================================================================
+        const now = new Date();
+        document.getElementById('uploadMonth').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        wireAnalyzeButton();
+        // Auto-show if data exists
+        const irMonths = allMonths('ir');
+        const mpMonths = allMonths('mp');
+        if (irMonths.length || mpMonths.length) {
+            if (irMonths.length) tabState.ir.mainMonth = irMonths.at(-1);
+            if (mpMonths.length) tabState.mp.mainMonth = mpMonths.at(-1);
+            currentTab = irMonths.length ? 'ir' : 'mp';
+            updateSelectors(tabState[currentTab].mainMonth);
+            setTimeout(() => {
+                refreshDashboard(tabState[currentTab].mainMonth);
+            }, 150);
+        } else {
+            updateSelectors(null);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/cy131/Downloads/**)",
+      "Read(//c/Users/cy131/Downloads/正規化/{for\\(i=580;i<=600;i++\\) printf \"\"%d: %s/**)"
+    ]
+  }
+}

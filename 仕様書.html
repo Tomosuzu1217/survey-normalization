@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アンケート分析ダッシュボード — 仕様書</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.7; }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+  h1 { font-size: 1.5rem; font-weight: 800; color: #4f46e5; border-bottom: 3px solid #4f46e5; padding-bottom: 8px; margin-bottom: 24px; }
+  h2 { font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 28px 0 12px; padding-left: 12px; border-left: 4px solid #6366f1; }
+  h3 { font-size: 0.95rem; font-weight: 700; color: #475569; margin: 16px 0 8px; }
+  p, li { font-size: 0.875rem; }
+  ul, ol { padding-left: 1.5em; margin: 6px 0 12px; }
+  li { margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.8rem; }
+  th, td { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; }
+  th { background: #f1f5f9; font-weight: 700; }
+  tr:nth-child(even) { background: #f8fafc; }
+  code { background: #e0e7ff; padding: 1px 6px; border-radius: 4px; font-size: 0.8rem; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+  .badge-amber { background: #fef3c7; color: #b45309; }
+  .badge-teal { background: #ccfbf1; color: #0f766e; }
+  .badge-red { background: #fee2e2; color: #dc2626; }
+  .note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 0.8rem; }
+  .update { color: #0f766e; font-weight: 700; font-size: 0.75rem; }
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>アンケート分析ダッシュボード 仕様書</h1>
+<p>最終更新: 2026-03-05</p>
+
+<!-- ===== 概要 ===== -->
+<h2>1. 概要</h2>
+<p>ハイクラス・エグゼクティブ向け転職サービスに関するアンケート調査データを分析する、ブラウザ完結型シングルページダッシュボードです。</p>
+<ul>
+  <li>ファイル構成: <code>index.html</code> 1ファイル（HTML + CSS + JS を内包）</li>
+  <li>外部ライブラリ: TailwindCSS (CDN), Chart.js + chartjs-plugin-datalabels (CDN), SheetJS / XLSX (CDN)</li>
+  <li>データ保存先: ブラウザのローカルストレージ（外部サーバーへの通信なし）</li>
+</ul>
+
+<!-- ===== 対応形式 ===== -->
+<h2>2. 入力ファイル</h2>
+<table>
+  <tr><th>形式</th><th>拡張子</th><th>エンコーディング</th></tr>
+  <tr><td>Excel</td><td><code>.xlsx</code> / <code>.xls</code></td><td>自動</td></tr>
+  <tr><td>CSV</td><td><code>.csv</code></td><td>UTF-8（BOM付含む）/ Shift-JIS 自動判定</td></tr>
+</table>
+<p>アップロード方法: ドラッグ＆ドロップ、またはファイル選択ダイアログ</p>
+
+<h3>2.1 必須ヘッダ列</h3>
+<table>
+  <tr><th>列名</th><th>用途</th><th>備考</th></tr>
+  <tr><td><code>Q1S1FA</code>〜<code>Q1S5FA</code></td><td>ハイクラス向け自由想起（S1〜S5）</td><td>自由記述テキスト</td></tr>
+  <tr><td><code>Q2S1FA</code>〜<code>Q2S5FA</code></td><td>エグゼクティブ向け自由想起（S1〜S5）</td><td>自由記述テキスト</td></tr>
+  <tr><td><code>Q3_1</code>〜<code>Q3_30</code>, <code>Q3_29FA</code></td><td>ハイクラス向け提示型認知（30サービス）</td><td>1=選択</td></tr>
+  <tr><td><code>Q4_1</code>〜<code>Q4_30</code>, <code>Q4_29FA</code></td><td>エグゼクティブ向け提示型認知（30サービス）</td><td>1=選択</td></tr>
+  <tr><td><code>Q5S1</code>〜<code>Q5S17</code></td><td>認知段階（17パネルサービス）</td><td>1〜7のコード</td></tr>
+  <tr><td><code>Q6S1_1</code>〜<code>Q6S17_15</code></td><td>接触チャネル（17サービス×15チャネル）</td><td>1=選択</td></tr>
+  <tr><td><code>Q7S1</code>〜<code>Q7S17</code></td><td>関心度（17サービス）</td><td>1〜5のコード</td></tr>
+  <tr><td><code>Q8S1</code>〜<code>Q8S17</code></td><td>利用意向（17サービス）</td><td>1〜5のコード</td></tr>
+  <tr><td><code>WB</code></td><td>ウェイトバック係数</td><td>最終列にフォールバック</td></tr>
+</table>
+
+<h3>2.2 属性列（フィルタ・クロス集計用）</h3>
+<table>
+  <tr><th>列名</th><th>内容</th><th>用途</th></tr>
+  <tr><td><code>SEX</code></td><td>性別（1=男性, 2=女性）</td><td><span class="badge badge-teal">属性分析</span></td></tr>
+  <tr><td><code>AGEID</code></td><td>年齢カテゴリ（1〜11）</td><td><span class="badge badge-blue">フィルタ</span> <span class="badge badge-teal">属性分析</span></td></tr>
+  <tr><td><code>SQ3</code></td><td>個人年収（1〜19）</td><td><span class="badge badge-blue">フィルタ</span> <span class="badge badge-teal">属性分析</span></td></tr>
+  <tr><td><code>SQ4</code></td><td>役職（1〜8）</td><td><span class="badge badge-teal">属性分析</span></td></tr>
+  <tr><td><code>SQ5</code></td><td>転職意向（1〜7）</td><td><span class="badge badge-blue">フィルタ</span> <span class="badge badge-teal">属性分析</span></td></tr>
+</table>
+
+<!-- ===== 分析タブ ===== -->
+<h2>3. 分析タブ（広報・IR / MP）</h2>
+<p>アップロード時に全行を2つのフィルタ条件で同時抽出し、タブごとに別々のデータとして保存します。</p>
+<table>
+  <tr><th>タブ</th><th>年齢 (AGEID)</th><th>年収 (SQ3)</th><th>転職意向 (SQ5)</th></tr>
+  <tr><td><span class="badge badge-blue">広報・IR</span></td><td>4〜11（25〜64歳）</td><td>5〜17（600万+）</td><td>1〜6（意向者+経験者）</td></tr>
+  <tr><td><span class="badge badge-purple">MP</span></td><td>4〜9（25〜54歳）</td><td>7〜17（800万+）</td><td>1〜5（意向者のみ）</td></tr>
+</table>
+
+<!-- ===== ストレージ ===== -->
+<h2>4. データ保存仕様</h2>
+<ul>
+  <li>保存先: <code>localStorage</code></li>
+  <li>キー形式: <code>survey3_{ir|mp}_{YYYY-MM}</code></li>
+  <li>1レコードに含まれるデータ:
+    <ul>
+      <li><code>respondentCount</code> — フィルタ通過者数</li>
+      <li><code>q1</code>, <code>q2</code> — 想起集計（s1 / total の辞書）</li>
+      <li><code>focus.services</code> — サービス別詳細（想起順位、Q3-Q8評価、チャネル等）</li>
+      <li><code>wbQ1</code>, <code>wbQ2</code>, <code>wbN</code> — WB加重集計</li>
+      <li><code>demo</code> — 属性別クロス集計（性別/年齢/年収/役職/転職意向 × Q1/Q2 想起）</li>
+    </ul>
+  </li>
+  <li>旧キー（<code>survey3_YYYY-MM</code>）は起動時に自動削除</li>
+</ul>
+
+<!-- ===== 表示機能 ===== -->
+<h2>5. 表示機能一覧</h2>
+
+<h3>5.1 自社サービス深掘り分析</h3>
+<p>JAC Recruitment を固定対象として、全設問の結果を横断表示します。</p>
+<ul>
+  <li>KPIメトリクスカード（8指標）: Q1想起人数、Q1第一想起率、Q2想起人数、Q2第一想起率、設問認知率、利用意向率、両領域想起率、平均スコア</li>
+  <li>順位別想起分布チャート</li>
+  <li>併記されやすいサービス Top10</li>
+  <li>ファネル指標（認知→関心→利用意向）</li>
+  <li>接触チャネル Top10</li>
+  <li>認知・関心・利用意向の分布チャート</li>
+  <li>Q1×Q2 クロス集計テーブル</li>
+  <li>併記クロス集計テーブル</li>
+  <li>設問ベース評価サマリーテーブル</li>
+  <li>月別比較テーブル</li>
+</ul>
+
+<h3>5.2 Q1 / Q2 想起チャート</h3>
+<ul>
+  <li>第一想起（S1）Top10 — 横棒グラフ（%表示）</li>
+  <li>全体想起（S1〜S5）Top10 — 横棒グラフ（%表示）</li>
+  <li>サマリーカード: N数、第一想起トップ(%)、全体想起トップ(%)、第一想起率</li>
+  <li><details> 詳細データテーブル（全サービス、S1/合計 × n(%)形式）</li>
+</ul>
+
+<h3>5.3 WB加重チャート <span class="badge badge-amber">WB</span></h3>
+<ul>
+  <li>Q1・Q2それぞれに第一想起/全体想起のWB加重版チャート（アンバー色）</li>
+  <li>WB係数で重み付けした割合を表示</li>
+</ul>
+
+<h3>5.4 属性別クロス集計 <span class="badge badge-teal">NEW</span></h3>
+<ul>
+  <li>Q1・Q2カード末尾のアコーディオン（<code>&lt;details&gt;</code>）で展開</li>
+  <li>5属性の切替タブ: 性別 / 年齢 / 年収 / 役職 / 転職意向</li>
+  <li>属性カテゴリ別のグループ横棒グラフ（TOP5サービス × 属性カテゴリ、%表示）
+    <ul>
+      <li>第一想起（S1）属性別</li>
+      <li>全体想起 属性別</li>
+    </ul>
+  </li>
+  <li>クロス集計テーブル: 属性カテゴリ × TOP10サービス（n(%)形式）</li>
+  <li>遅延レンダリング: アコーディオン展開時にのみ描画（パフォーマンス配慮）</li>
+</ul>
+
+<h3>5.5 年収グループ化</h3>
+<table>
+  <tr><th>グループ名</th><th>SQ3コード</th><th>元の年収帯</th></tr>
+  <tr><td>〜600万未満</td><td>1〜4</td><td>300万未満〜500-600万</td></tr>
+  <tr><td>600〜800万</td><td>5〜6</td><td>600-700万, 700-800万</td></tr>
+  <tr><td>800〜1000万</td><td>7〜8</td><td>800-900万, 900-1000万</td></tr>
+  <tr><td>1000〜1500万</td><td>9〜13</td><td>1000-1100万 〜 1400-1500万</td></tr>
+  <tr><td>1500万以上</td><td>14〜17</td><td>1500-2000万 〜 3000万以上</td></tr>
+  <tr><td>わからない/答えたくない</td><td>18〜19</td><td>—</td></tr>
+</table>
+
+<h3>5.6 月次トレンド</h3>
+<ul>
+  <li>2か月分以上のデータがあると自動表示</li>
+  <li>JAC Recruitment の月別推移: 想起・第一想起・認知・利用意向</li>
+  <li>折れ線チャート + テーブル</li>
+</ul>
+
+<h3>5.7 複数月比較モード</h3>
+<ul>
+  <li>比較月チップをクリックして複数月を選択</li>
+  <li>Q1/Q2チャートが折れ線グラフに切り替わり、サービス別の時系列推移を表示</li>
+  <li>比較テーブルで月別のS1/合計を一覧表示</li>
+</ul>
+
+<!-- ===== サービス名正規化 ===== -->
+<h2>6. サービス名正規化</h2>
+<p>自由記述のサービス名を <code>SERVICE_DICT</code> で統一名に正規化します。</p>
+<ul>
+  <li>全角/半角統一、スペース除去、大文字化</li>
+  <li>完全一致 → 部分一致 → 正規表現マッチ の順で照合</li>
+  <li>未マッチの場合は入力値をそのまま使用</li>
+  <li>「特にない」「なし」「思いつかない」等は除外</li>
+</ul>
+
+<!-- ===== エンコーディング ===== -->
+<h2>7. CSV エンコーディング検出</h2>
+<ol>
+  <li>BOM検出（UTF-8 BOM: <code>EF BB BF</code>、UTF-16 LE/BE）</li>
+  <li>UTF-8 マルチバイトシーケンスの完全検証（最大8KB）</li>
+  <li>Shift-JIS パターン検出（2バイト文字の先頭バイト <code>0x81-0x9F</code>, <code>0xE0-0xFC</code>）</li>
+  <li>デフォルト: UTF-8</li>
+</ol>
+
+<!-- ===== 技術仕様 ===== -->
+<h2>8. 技術仕様</h2>
+<table>
+  <tr><th>項目</th><th>詳細</th></tr>
+  <tr><td>ファイル構成</td><td>シングルHTML（インラインCSS + JS）</td></tr>
+  <tr><td>CSS</td><td>TailwindCSS 3.x (CDN)</td></tr>
+  <tr><td>チャート</td><td>Chart.js 4.x + chartjs-plugin-datalabels 2.x</td></tr>
+  <tr><td>ファイル読込</td><td>SheetJS (xlsx.full.min.js) CDN</td></tr>
+  <tr><td>データ保存</td><td>localStorage（キー: <code>survey3_{tab}_{month}</code>）</td></tr>
+  <tr><td>非同期処理</td><td>バッチ処理 + <code>setTimeout(0)</code> でUIブロッキング回避</td></tr>
+  <tr><td>チャート管理</td><td>グローバル <code>CHARTS</code> オブジェクトで destroy/recreate</td></tr>
+  <tr><td>プログレス</td><td>アップロード時にプログレスバー表示（IR集計→MP集計→保存）</td></tr>
+</table>
+
+<!-- ===== 注意事項 ===== -->
+<h2>9. 制約・注意事項</h2>
+<ul>
+  <li>データはブラウザのローカルストレージに保存されるため、他のブラウザ・デバイスとは共有されません</li>
+  <li>ローカルストレージの容量制限（通常5〜10MB）を超えると保存に失敗します</li>
+  <li>同じ年月のデータを再アップロードすると上書きされます</li>
+  <li>属性別クロス集計は新規アップロード分から有効です（旧データには <code>demo</code> フィールドがないため表示されません）</li>
+  <li>外部サーバーへの通信は一切行いません（完全オフライン動作）</li>
+</ul>
+
+<footer>
+  アンケート分析ダッシュボード 仕様書 — 2026-03-05
+</footer>
+
+</div>
+</body>
+</html>
