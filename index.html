@@ -407,6 +407,8 @@
         <div id="tabBar" class="hidden flex gap-2 flex-wrap items-center">
             <button id="tabIr" class="tab-btn active" onclick="switchTab('ir')">広報・IR</button>
             <button id="tabMp" class="tab-btn" onclick="switchTab('mp')">MP</button>
+            <span class="w-px h-6 bg-gray-300 mx-1"></span>
+            <button id="tabCrosstab" class="tab-btn disabled" onclick="switchToCrosstab()">クロス集計</button>
         </div>
         <div id="filterBanner" class="hidden card px-4 py-2 text-xs text-slate-600 flex items-center gap-2">
             <span class="font-bold text-indigo-600" id="filterBannerLabel"></span>
@@ -804,6 +806,72 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === CROSSTAB TAB === -->
+        <div id="tabContent_crosstab" class="space-y-5 hidden fade">
+            <div class="card p-6 space-y-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">クロス集計</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">全データ（フィルタなし）を属性別に集計</p>
+                    </div>
+                    <button id="downloadCrosstabBtn"
+                        class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition text-white font-semibold py-2 px-4 rounded-lg shadow text-sm whitespace-nowrap flex items-center gap-2"
+                        onclick="downloadCrossTabExcel()">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Excelダウンロード
+                    </button>
+                </div>
+                <!-- Pivot options -->
+                <div class="flex flex-wrap gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">行軸（グルーピング）</label>
+                        <select id="ctGroupBy" onchange="onCrosstabOptionChange()" class="rounded-lg border border-gray-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="cellname">CELLNAME（そのまま）</option>
+                            <option value="sex">性別</option>
+                            <option value="ageid" selected>年齢</option>
+                            <option value="sq3">年収</option>
+                            <option value="sq4">役職</option>
+                            <option value="sq5">転職意向</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">想起範囲（Q1/Q2）</label>
+                        <div class="flex gap-3 text-sm">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctRecall" value="all" checked onchange="onCrosstabOptionChange()"><span>全体想起</span></label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctRecall" value="first" onchange="onCrosstabOptionChange()"><span>第一想起のみ</span></label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">表示値</label>
+                        <div class="flex gap-3 text-sm">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctDisplay" value="both" checked onchange="onCrosstabOptionChange()"><span>実数+%</span></label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctDisplay" value="count" onchange="onCrosstabOptionChange()"><span>実数</span></label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctDisplay" value="pct" onchange="onCrosstabOptionChange()"><span>%</span></label>
+                        </div>
+                    </div>
+                </div>
+                <!-- Q sub-tabs -->
+                <div id="crosstabSubTabs" class="flex gap-1.5 flex-wrap">
+                    <button class="tab-btn active text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q1" onclick="selectCrosstabQ('Q1',this)">Q1 ハイクラス想起</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q2" onclick="selectCrosstabQ('Q2',this)">Q2 エグゼクティブ想起</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q3" onclick="selectCrosstabQ('Q3',this)">Q3 ハイクラス認知</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q4" onclick="selectCrosstabQ('Q4',this)">Q4 エグゼクティブ認知</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q5" onclick="selectCrosstabQ('Q5',this)">Q5 認知度</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q7" onclick="selectCrosstabQ('Q7',this)">Q7 関心度</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q8" onclick="selectCrosstabQ('Q8',this)">Q8 利用意向</button>
+                </div>
+            </div>
+            <div class="card overflow-hidden">
+                <div id="crosstabTableWrap" class="overflow-x-auto max-h-[75vh] overflow-y-auto">
+                    <div id="crosstabEmpty" class="p-8 text-center text-sm text-gray-400">データをアップロードしてください</div>
+                    <table id="crosstabTable" class="hidden min-w-full text-xs border-collapse">
+                        <thead id="crosstabThead" class="sticky top-0 z-10 bg-slate-100"></thead>
+                        <tbody id="crosstabTbody"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -2165,7 +2233,7 @@
             chips.innerHTML = allUnique.map(month => `<span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-white/20 text-white border border-white/30">${month}</span>`).join('');
 
             const tabBar = document.getElementById('tabBar');
-            tabBar.classList.toggle('hidden', allUnique.length === 0);
+            tabBar.classList.toggle('hidden', allUnique.length === 0 && !_crossTabData);
         }
 
         function renderEmptyFocusState(message) {
@@ -2594,8 +2662,12 @@
             }
 
             renderFocusSection(mainMonth, cmpMonths, TARGET_SERVICE);
-            document.getElementById('tabContent_analysis').classList.remove('hidden');
-            document.getElementById('tabContent_timeline').classList.remove('hidden');
+            // Only show analysis/timeline if crosstab tab is not active
+            const crosstabActive = document.getElementById('tabCrosstab').classList.contains('active');
+            if (!crosstabActive) {
+                document.getElementById('tabContent_analysis').classList.remove('hidden');
+                document.getElementById('tabContent_timeline').classList.remove('hidden');
+            }
 
             // Update filter banner
             const filter = TAB_FILTERS[tab];
@@ -2695,6 +2767,8 @@
             currentTab = tab;
             document.getElementById('tabIr').classList.toggle('active', tab === 'ir');
             document.getElementById('tabMp').classList.toggle('active', tab === 'mp');
+            document.getElementById('tabCrosstab').classList.remove('active');
+            document.getElementById('tabContent_crosstab').classList.add('hidden');
             updateSelectors(tabState[tab].mainMonth);
             refreshDashboard(tabState[tab].mainMonth);
         }
@@ -2866,6 +2940,291 @@
         }
 
         // =====================================================================
+        // CROSSTAB: Pivot-style cross-tabulation
+        // =====================================================================
+        let _crossTabData = null;  // { cells, groupNames, q1Svcs, q2Svcs }
+        let _crossTabRawRows = null; // keep raw rows ref for re-build
+        let _currentCrosstabQ = 'Q1';
+
+        function getCrosstabOptions() {
+            return {
+                groupBy: document.getElementById('ctGroupBy')?.value || 'ageid',
+                recallScope: document.querySelector('input[name="ctRecall"]:checked')?.value || 'all',
+                displayMode: document.querySelector('input[name="ctDisplay"]:checked')?.value || 'both',
+            };
+        }
+
+        function resolveGroupLabel(row, groupBy, headers) {
+            if (groupBy === 'cellname') {
+                const idx = headers.indexOf('CELLNAME');
+                return idx >= 0 ? (String(row[idx] || '').trim() || '(空白)') : '(空白)';
+            }
+            const def = DEMO_DEFS.find(d => d.key === groupBy);
+            if (!def) return '(不明)';
+            const colIdx = headers.indexOf(def.header);
+            if (colIdx < 0) return '(不明)';
+            const rawVal = parseFloat(row[colIdx]);
+            if (isNaN(rawVal)) return '(未回答)';
+            if (def.groups) {
+                for (const g of def.groups) { if (g.test(rawVal)) return g.label; }
+                return '(その他)';
+            }
+            return def.labels?.[rawVal] || `(${rawVal})`;
+        }
+
+        async function buildCrossTabData(rows, onProgress) {
+            if (!rows || rows.length < 2) return null;
+            _crossTabRawRows = rows;
+            const opts = getCrosstabOptions();
+            const headers = rows[0].map(h => String(h).trim());
+
+            // Column indexes
+            const q1AllIdxs = ['Q1S1FA','Q1S2FA','Q1S3FA','Q1S4FA','Q1S5FA'].map(h => headers.indexOf(h)).filter(i => i !== -1);
+            const q2AllIdxs = ['Q2S1FA','Q2S2FA','Q2S3FA','Q2S4FA','Q2S5FA'].map(h => headers.indexOf(h)).filter(i => i !== -1);
+            const q1Idxs = opts.recallScope === 'first' ? q1AllIdxs.slice(0, 1) : q1AllIdxs;
+            const q2Idxs = opts.recallScope === 'first' ? q2AllIdxs.slice(0, 1) : q2AllIdxs;
+            const q3Idxs = []; for (let i = 1; i <= 30; i++) { const idx = headers.indexOf('Q3_' + i); if (idx !== -1) q3Idxs.push({ n: i, idx }); }
+            const q4Idxs = []; for (let i = 1; i <= 30; i++) { const idx = headers.indexOf('Q4_' + i); if (idx !== -1) q4Idxs.push({ n: i, idx }); }
+            const q5Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q5S' + i); if (idx !== -1) q5Idxs.push({ n: i, idx }); }
+            const q7Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q7S' + i); if (idx !== -1) q7Idxs.push({ n: i, idx }); }
+            const q8Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q8S' + i); if (idx !== -1) q8Idxs.push({ n: i, idx }); }
+
+            const cells = new Map();
+            const getCell = (name) => {
+                if (cells.has(name)) return cells.get(name);
+                const c = { count: 0, Q1: {}, Q2: {}, Q3: {}, Q4: {}, Q5: {}, Q7: {}, Q8: {} };
+                cells.set(name, c);
+                return c;
+            };
+            const allQ1Svcs = new Set(), allQ2Svcs = new Set();
+            const totalRows = rows.length - 1;
+            const batchSize = totalRows > 20000 ? 2000 : 800;
+
+            for (let start = 0; start < totalRows; start += batchSize) {
+                const end = Math.min(start + batchSize, totalRows);
+                for (let r = start; r < end; r++) {
+                    const row = rows[r + 1];
+                    if (!row) continue;
+                    const grp = resolveGroupLabel(row, opts.groupBy, headers);
+                    const total = getCell('全体');
+                    const cell = getCell(grp);
+                    total.count++; cell.count++;
+
+                    // Q1
+                    const q1Set = new Set();
+                    for (const idx of q1Idxs) { const v = normalizeText(row[idx]); if (v) q1Set.add(v); }
+                    for (const svc of q1Set) { allQ1Svcs.add(svc); total.Q1[svc] = (total.Q1[svc] || 0) + 1; cell.Q1[svc] = (cell.Q1[svc] || 0) + 1; }
+                    // Q2
+                    const q2Set = new Set();
+                    for (const idx of q2Idxs) { const v = normalizeText(row[idx]); if (v) q2Set.add(v); }
+                    for (const svc of q2Set) { allQ2Svcs.add(svc); total.Q2[svc] = (total.Q2[svc] || 0) + 1; cell.Q2[svc] = (cell.Q2[svc] || 0) + 1; }
+                    // Q3/Q4 flags
+                    for (const { n, idx } of q3Idxs) { if (String(row[idx]).trim() === '1') { total.Q3[n] = (total.Q3[n] || 0) + 1; cell.Q3[n] = (cell.Q3[n] || 0) + 1; } }
+                    for (const { n, idx } of q4Idxs) { if (String(row[idx]).trim() === '1') { total.Q4[n] = (total.Q4[n] || 0) + 1; cell.Q4[n] = (cell.Q4[n] || 0) + 1; } }
+                    // Q5/Q7/Q8 scores
+                    for (const qk of ['Q5', 'Q7', 'Q8']) {
+                        const idxs = qk === 'Q5' ? q5Idxs : qk === 'Q7' ? q7Idxs : q8Idxs;
+                        for (const { n, idx } of idxs) {
+                            const val = parseFloat(row[idx]);
+                            if (!isNaN(val) && val > 0) {
+                                if (!total[qk][n]) total[qk][n] = { sum: 0, cnt: 0 };
+                                if (!cell[qk][n]) cell[qk][n] = { sum: 0, cnt: 0 };
+                                total[qk][n].sum += val; total[qk][n].cnt++;
+                                cell[qk][n].sum += val; cell[qk][n].cnt++;
+                            }
+                        }
+                    }
+                }
+                if (onProgress) onProgress(end, totalRows);
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+
+            const sortByTotal = (svcs, qk) => [...svcs].sort((a, b) => (cells.get('全体')[qk][b] || 0) - (cells.get('全体')[qk][a] || 0));
+            const groupNames = ['全体', ...[...cells.keys()].filter(k => k !== '全体').sort((a, b) => (cells.get(b)?.count || 0) - (cells.get(a)?.count || 0))];
+
+            _crossTabData = { cells, groupNames, q1Svcs: sortByTotal(allQ1Svcs, 'Q1'), q2Svcs: sortByTotal(allQ2Svcs, 'Q2') };
+            return _crossTabData;
+        }
+
+        async function onCrosstabOptionChange() {
+            if (!_crossTabRawRows) return;
+            await buildCrossTabData(_crossTabRawRows);
+            renderCrossTab(_currentCrosstabQ);
+        }
+
+        function selectCrosstabQ(qKey, btn) {
+            _currentCrosstabQ = qKey;
+            document.querySelectorAll('#crosstabSubTabs .tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderCrossTab(qKey);
+        }
+
+        function getColDefs(qKey) {
+            if (qKey === 'Q1') return { keys: _crossTabData.q1Svcs, labels: _crossTabData.q1Svcs, isScore: false };
+            if (qKey === 'Q2') return { keys: _crossTabData.q2Svcs, labels: _crossTabData.q2Svcs, isScore: false };
+            if (qKey === 'Q3' || qKey === 'Q4') {
+                const keys = Array.from({ length: 30 }, (_, i) => i + 1);
+                return { keys, labels: keys.map(n => AWARENESS_OPTION_INDEX[n] || (qKey + '_' + n)), isScore: false };
+            }
+            // Q5, Q7, Q8
+            const keys = Array.from({ length: 17 }, (_, i) => i + 1);
+            return { keys, labels: keys.map(n => PANEL_SERVICE_INDEX[n] || ('S' + n)), isScore: true };
+        }
+
+        function renderCrossTab(qKey) {
+            const table = document.getElementById('crosstabTable');
+            const empty = document.getElementById('crosstabEmpty');
+            if (!_crossTabData) { table.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden'); table.classList.remove('hidden');
+
+            const { cells, groupNames } = _crossTabData;
+            const { keys: colKeys, labels: colLabels, isScore } = getColDefs(qKey);
+            const displayMode = getCrosstabOptions().displayMode;
+            const groupByLabel = document.getElementById('ctGroupBy').selectedOptions[0]?.textContent || 'グループ';
+
+            // Max for heatmap
+            let maxVal = 0;
+            if (!isScore) {
+                for (const gn of groupNames) {
+                    const d = cells.get(gn)?.[qKey] || {};
+                    for (const k of colKeys) { const v = d[k] || 0; if (v > maxVal) maxVal = v; }
+                }
+            }
+
+            const thCls = 'py-2 px-3 text-right font-bold text-xs text-slate-600 border-b border-slate-200 bg-slate-100 min-w-[80px]';
+            const thead = document.getElementById('crosstabThead');
+            thead.innerHTML = `<tr><th class="py-2 px-3 text-left font-bold text-xs text-slate-600 border-b border-slate-200 sticky left-0 bg-slate-100 z-20 min-w-[200px]">${escHtml(groupByLabel)}</th><th class="${thCls}">n</th>${colLabels.map(l => `<th class="${thCls}">${escHtml(l)}</th>`).join('')}</tr>`;
+
+            const tbody = document.getElementById('crosstabTbody');
+            const frags = [];
+            for (const gn of groupNames) {
+                const d = cells.get(gn);
+                if (!d) continue;
+                const n = d.count;
+                const isTotal = gn === '全体';
+                const rowCls = isTotal ? 'bg-indigo-50 font-bold' : 'hover:bg-slate-50';
+                const stickyBg = isTotal ? 'bg-indigo-50 font-bold' : 'bg-white';
+                let tds = `<td class="py-1.5 px-3 border-b border-slate-100 sticky left-0 ${stickyBg} z-10 text-xs">${escHtml(gn)}</td>`;
+                tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs font-semibold">${n.toLocaleString()}</td>`;
+                const qData = d[qKey] || {};
+                for (const k of colKeys) {
+                    if (isScore) {
+                        const entry = qData[k];
+                        if (entry && entry.cnt > 0) {
+                            const avg = (entry.sum / entry.cnt).toFixed(2);
+                            tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs">${avg}<span class="text-gray-400 ml-0.5">(${entry.cnt})</span></td>`;
+                        } else {
+                            tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs text-gray-300">-</td>`;
+                        }
+                    } else {
+                        const val = qData[k] || 0;
+                        const pct = n > 0 ? (val / n * 100).toFixed(1) : '0.0';
+                        const intensity = maxVal > 0 ? Math.min(val / maxVal, 1) : 0;
+                        const bg = val > 0 ? `rgba(99,102,241,${0.05 + intensity * 0.25})` : '';
+                        let cellText;
+                        if (val === 0) { cellText = '-'; }
+                        else if (displayMode === 'count') { cellText = val.toLocaleString(); }
+                        else if (displayMode === 'pct') { cellText = pct + '%'; }
+                        else { cellText = `${val.toLocaleString()}<span class="text-gray-400 ml-0.5">(${pct}%)</span>`; }
+                        tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs" style="background:${bg}">${cellText}</td>`;
+                    }
+                }
+                frags.push(`<tr class="${rowCls}">${tds}</tr>`);
+            }
+            tbody.innerHTML = frags.join('');
+        }
+
+        function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        function downloadCrossTabExcel() {
+            if (!_crossTabData) return;
+            const { cells, groupNames } = _crossTabData;
+            const opts = getCrosstabOptions();
+            const groupByLabel = document.getElementById('ctGroupBy').selectedOptions[0]?.textContent || 'グループ';
+            const recallLabel = opts.recallScope === 'first' ? '第一想起のみ' : '全体想起';
+            const wb = XLSX.utils.book_new();
+
+            const sheetDefs = [
+                { key: 'Q1', label: 'Q1_ハイクラス想起' },
+                { key: 'Q2', label: 'Q2_エグゼクティブ想起' },
+                { key: 'Q3', label: 'Q3_ハイクラス認知' },
+                { key: 'Q4', label: 'Q4_エグゼクティブ認知' },
+                { key: 'Q5', label: 'Q5_認知度' },
+                { key: 'Q7', label: 'Q7_関心度' },
+                { key: 'Q8', label: 'Q8_利用意向' },
+            ];
+
+            for (const def of sheetDefs) {
+                const { keys: colKeys, labels: colLabels, isScore } = getColDefs(def.key);
+                const aoa = [];
+                // Meta row
+                const meta = [`行軸: ${groupByLabel}`];
+                if (def.key === 'Q1' || def.key === 'Q2') meta.push(`想起: ${recallLabel}`);
+                meta.push(`表示: ${opts.displayMode === 'count' ? '実数' : opts.displayMode === 'pct' ? '%' : '実数+%'}`);
+                aoa.push([meta.join(' / ')]);
+
+                // Header
+                if (isScore) {
+                    aoa.push([groupByLabel, 'n', ...colLabels.map(l => l + '(平均)'), ...colLabels.map(l => l + '(n)')]);
+                } else {
+                    const hdr = [groupByLabel, 'n'];
+                    for (const l of colLabels) {
+                        if (opts.displayMode === 'count') hdr.push(l);
+                        else if (opts.displayMode === 'pct') hdr.push(l + '(%)');
+                        else { hdr.push(l + '(件数)'); hdr.push(l + '(%)'); }
+                    }
+                    aoa.push(hdr);
+                }
+                // Data
+                for (const gn of groupNames) {
+                    const d = cells.get(gn);
+                    if (!d) continue;
+                    const n = d.count;
+                    const qData = d[def.key] || {};
+                    const rowArr = [gn, n];
+                    if (isScore) {
+                        const avgs = [], cnts = [];
+                        for (const k of colKeys) {
+                            const e = qData[k];
+                            if (e && e.cnt > 0) { avgs.push(+(e.sum / e.cnt).toFixed(2)); cnts.push(e.cnt); }
+                            else { avgs.push(''); cnts.push(0); }
+                        }
+                        rowArr.push(...avgs, ...cnts);
+                    } else {
+                        for (const k of colKeys) {
+                            const val = qData[k] || 0;
+                            const pct = n > 0 ? +(val / n * 100).toFixed(1) : 0;
+                            if (opts.displayMode === 'count') rowArr.push(val);
+                            else if (opts.displayMode === 'pct') rowArr.push(pct);
+                            else { rowArr.push(val); rowArr.push(pct); }
+                        }
+                    }
+                    aoa.push(rowArr);
+                }
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+                ws['!cols'] = [{ wch: 35 }, { wch: 8 }, ...Array(Math.max(aoa[1].length - 2, 0)).fill({ wch: 14 })];
+                XLSX.utils.book_append_sheet(wb, ws, def.label.substring(0, 31));
+            }
+
+            const now = new Date();
+            const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+            const baseName = _enrichedFileName.replace(/\.[^.]+$/, '');
+            XLSX.writeFile(wb, `クロス集計_${baseName}_${dateStr}.xlsx`);
+        }
+
+        function switchToCrosstab() {
+            if (!_crossTabData) return;
+            document.getElementById('tabIr').classList.remove('active');
+            document.getElementById('tabMp').classList.remove('active');
+            document.getElementById('tabCrosstab').classList.add('active');
+            document.getElementById('tabContent_analysis').classList.add('hidden');
+            document.getElementById('tabContent_timeline').classList.add('hidden');
+            document.getElementById('filterBanner').classList.add('hidden');
+            document.getElementById('tabContent_crosstab').classList.remove('hidden');
+            renderCrossTab(_currentCrosstabQ);
+        }
+
+        // =====================================================================
         // ENRICHED DATA (正規化列付きデータ) for download
         // =====================================================================
         let _enrichedHeaders = null;
@@ -3003,24 +3362,31 @@
 
                 // Build enriched data with normalized columns for download
                 _enrichedFileName = file.name;
-                showProgress('正規化列を生成中', 20, `${Math.max(rows.length - 1, 0).toLocaleString()} 件を処理中`);
+                showProgress('正規化列を生成中', 15, `${Math.max(rows.length - 1, 0).toLocaleString()} 件を処理中`);
                 await buildEnrichedData(rows, (processed, total) => {
                     const ratio = total ? processed / total : 1;
-                    showProgress('正規化列を生成中', 20 + ratio * 8, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                    showProgress('正規化列を生成中', 15 + ratio * 7, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                });
+
+                // Build cross-tab data
+                showProgress('クロス集計を生成中', 22, `${Math.max(rows.length - 1, 0).toLocaleString()} 件を集計中`);
+                await buildCrossTabData(rows, (processed, total) => {
+                    const ratio = total ? processed / total : 1;
+                    showProgress('クロス集計を生成中', 22 + ratio * 10, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
                 });
 
                 // IR extraction
-                showProgress('広報・IR集計中', 30, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
+                showProgress('広報・IR集計中', 34, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
                 const irStats = await extractFilteredStatsAsync(rows, 'ir', (processed, total) => {
                     const ratio = total ? processed / total : 1;
-                    showProgress('広報・IR集計中', 30 + ratio * 28, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                    showProgress('広報・IR集計中', 34 + ratio * 26, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
                 });
 
                 // MP extraction
-                showProgress('MP集計中', 60, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
+                showProgress('MP集計中', 62, `${Math.max(rows.length - 1, 0).toLocaleString()} 件をフィルタ中`);
                 const mpStats = await extractFilteredStatsAsync(rows, 'mp', (processed, total) => {
                     const ratio = total ? processed / total : 1;
-                    showProgress('MP集計中', 60 + ratio * 28, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
+                    showProgress('MP集計中', 62 + ratio * 26, `${processed.toLocaleString()} / ${total.toLocaleString()} 件`);
                 });
 
                 showProgress('結果を保存中', 90, `${month} の集計結果を保存しています`);
@@ -3038,6 +3404,10 @@
                 // Show download button if enriched data is available
                 const dlBtn = document.getElementById('downloadEnrichedBtn');
                 if (_enrichedHeaders && _enrichedRows) dlBtn.classList.remove('hidden');
+
+                // Enable crosstab tab
+                const ctBtn = document.getElementById('tabCrosstab');
+                if (_crossTabData) { ctBtn.classList.remove('disabled'); ctBtn.disabled = false; }
             } catch (err) {
                 setUploadVisualState('error', `${file.name} の読込に失敗`);
                 showProgress('読み込みエラー', null, err.message, 'red');
