@@ -853,16 +853,38 @@
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="ctDisplay" value="pct" onchange="onCrosstabOptionChange()"><span>%</span></label>
                         </div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">小数桁数</label>
+                        <select id="ctDecimals" onchange="renderCrossTab(_currentCrosstabQ)" class="rounded-lg border border-gray-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="0">0</option>
+                            <option value="1" selected>1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Group filter -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1">行フィルター（チェックを外すと除外）</label>
+                    <div id="ctGroupFilter" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto text-xs"></div>
                 </div>
                 <!-- Q sub-tabs -->
                 <div id="crosstabSubTabs" class="flex gap-1.5 flex-wrap">
-                    <button class="tab-btn active text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q1" onclick="selectCrosstabQ('Q1',this)">Q1 ハイクラス想起</button>
-                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q2" onclick="selectCrosstabQ('Q2',this)">Q2 エグゼクティブ想起</button>
-                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q3" onclick="selectCrosstabQ('Q3',this)">Q3 ハイクラス認知</button>
-                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q4" onclick="selectCrosstabQ('Q4',this)">Q4 エグゼクティブ認知</button>
+                    <button class="tab-btn active text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q1" onclick="selectCrosstabQ('Q1',this)">Q1 想起(HC)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q2" onclick="selectCrosstabQ('Q2',this)">Q2 想起(EX)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q3" onclick="selectCrosstabQ('Q3',this)">Q3 認知(HC)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q4" onclick="selectCrosstabQ('Q4',this)">Q4 認知(EX)</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q5" onclick="selectCrosstabQ('Q5',this)">Q5 認知度</button>
-                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q7" onclick="selectCrosstabQ('Q7',this)">Q7 関心度</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q7" onclick="selectCrosstabQ('Q7',this)">Q7 関心</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q8" onclick="selectCrosstabQ('Q8',this)">Q8 利用意向</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q10" onclick="selectCrosstabQ('Q10',this)">Q10 利用サービス</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q11" onclick="selectCrosstabQ('Q11',this)">Q11 重視点</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q12" onclick="selectCrosstabQ('Q12',this)">Q12 企業認知</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q13" onclick="selectCrosstabQ('Q13',this)">Q13 企業魅力</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q14" onclick="selectCrosstabQ('Q14',this)">Q14 働きたい</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q15" onclick="selectCrosstabQ('Q15',this)">Q15 企業イメージ</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q16" onclick="selectCrosstabQ('Q16',this)">Q16 JAC特徴</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q17" onclick="selectCrosstabQ('Q17',this)">Q17 価値観</button>
                 </div>
             </div>
             <div class="card overflow-hidden">
@@ -1130,6 +1152,7 @@
             { name: 'インスパイア', variants: ['インスパイア'], fuzzy: [] },
             { name: 'パーソル', variants: ['パーソル', 'パーソルキャリア'], fuzzy: [/パーソル/] },
             { name: 'レイノス', variants: ['レイノス'], fuzzy: [] },
+            { name: 'Michael Page', variants: ['マイケルページ', 'michael page'], fuzzy: [/マイケル.?ペ[ーイ]ジ/] },
         ];
 
         // ================================================================
@@ -1138,7 +1161,7 @@
         const GENERIC_TERMS_RE = /^(ヘッドハンティング|ヘッドハンター|ヘッドハント|ベッドハンティング|ヘットハンティング|転職エージェント|転職支援|転職ナビ|転職サイト|転職|スカウト|スカウトサービス|スカウト会社|求人オファー|マッチング|マッチングサービス|エージェント|外資系|高額案件|高収入|高給料|高年収|年収[^\s]*|管理職|管理職ポストの転職|部長.*転職|社長.*転職|取締役|ハイクラス(転職|の転職|向け転職|案件)?|エグゼクティブ(転職|案件|案内|案件の紹介)?|ハイマネジメント|非公開求人|個人対応|個別対応|シニア対応|CxOクラス|リテイナーサーチ|サーチファーム|ハイプロ|ダイレクトリクルーティング|支援|ハイ転職|専門性|即戦力|求人|クラス|スタッフサービス)$/i;
 
         // 不明・無効（集計から除外）とみなすパターン
-        const INVALID_RE = /^(なし|とくに|特に|ない|無い|無し|なきか|なき|なさ|わから|分から|解ら|判ら|わかな|思い(出せ|浮かば|つか|付か|きらない|ません)|知(ら|りません)|しらな|ありません|ありがとう|よろしく|不明|ふめい|none|ok|nan|使いやす|ナッシング|興味ない|何も知らな|ハードルが高|検討したい|多々ある|全部|プラチナ|高い$|高額$|即戦力$|ハイクラス$|です$|ます$|いたします|覚えてな|浮かばな|です。|ます。|ないです|ないです。|ない。|しらない|しらなし|興味な|とくにな$|よく知らな|いろいろ|リクエスト|時なし|転機|不動産|東レ|楽天|Amazon|Google|LINE|au|ソニー|サントリー|旭化成|ベンツ|サイバーエージェント|タウンワーク|バイトル|日清食品|じゃらん|はたらいく|日経キャリア|日経|ロビー|万パワー|メビウス|コスパフォーマンス|タイプ$|ラウンジ$|チーム$|カーバー|サイマル|マリナビ都電|タイタン$|バラク|クリアファイル|とらーゆ|パラジウム|ベンチアウティ|ダービン|ファイヤーエイメッカー|雰囲気|好きではない|ずっと同じ人が|昇給できる|厳選された求人|資料が多い|使いやすい|ハードルが高い|ありがとうございます|わかりません。|知らないです|知らない|今すぐに出ない|分かりません|特に思い浮かびません|特に何も浮かばない|すぐには思い浮かびません|年収いくら|中途採用|エグゼクティブ案件の紹介|管理職向け転職|よろしくお願いいたします|らなななな|かやかやかやか|なまなわなわなわなわなわな|あいでや|やたやたやたやたやたやたやたやた|ベンダウディ|たやたやて|らのっぼ窶怩|zj丑mxl|Jvuuggf|Vuuvvuvuc|t k k|いxkcm|わにやな|なさわざな|なんさわさなわさかわ|りしょうかつ|邦文と連絡|高年収$|やたやた|なななな|まなまはなまなな)$/i;
+        const INVALID_RE = /^(なし|とくに|特に|ない|無い|無し|なきか|なき|なさ|わから|分から|解ら|判ら|わかな|わかない|わならない|思い(出せ|浮かば|つか|付か|きらない|ません|つかなち)|知(ら|りません)|しらな|ありません|ありがとう|よろしく|不明|ふめい|none|ok|nan|使いやす|ナッシング|興味ない|何も知らな|ハードルが高|検討したい|多々ある|全部|プラチナ|高い$|高額$|即戦力$|ハイクラス$|です$|ます$|いたします|覚えてな|浮かばな|です。|ます。|ないです|ないです。|ない。|ないない|しらない|しらなし|興味な|とくにな|よく知らな|いろいろ|リクエスト|時なし|転機|不動産|東レ|楽天|Amazon|Google|LINE|au|ソニー|サントリー|旭化成|ベンツ|ベンツアウディ|サイバーエージェント|タウンワーク|バイトル|日清食品|じゃらん|はたらいく|日経キャリア|日経|ロビー|万パワー|メビウス|コスパフォーマンス|コストパフォーマンス|タイプ$|ラウンジ$|チーム$|カーバー|サイマル|マリナビ都電|タイタン$|バラク|クリアファイル|とらーゆ|とらばーゆ|パラジウム|ベンチアウティ|ダービン|ファイヤー(エイメッカー|ジェイデッカー)|雰囲気|好きではない|ずっと同じ人が|昇給できる|厳選された求人|資料が多い|使いやすい|ハードルが高い|ありがとうございます|わかりません。?|知らないです|知らない|今(は)?すぐに出ない|分かりません|特に思い浮か(ば|び)ません|特に何も(思い)?浮かばない|すぐには思い(浮か|付き)ません|年収(いくら|アップ)|中途採用|エグゼクティブ案件の紹介|管理職向け(転職)?|よろしくお願いいたします|らなななな|かやかやかやか|なまなわなわ|あいでや|あいでる|やたやたやた|ベンダウディ|たやたやて|たやたはた|らのっぼ|zj|Jvuuggf|Vuuvvuvuc|t k k|いxkcm|いぢxkcm|わにやな|なさわざな|なんさわさなわさかわ|んさわさなわかわかわ|りしょうかつ|りしゅうかつ|邦文と連絡|高年収$|高給料|やたやた|なななな|まなまは|特になし。?|特にない。?|特にはない|特ににし|特なになし|特にありません。?|特にございません|とくになし|とくにない|とくにありません|とくになき|とくｗ|思い浮かびません|分からないです。?|分りません|分からな$|忘れた|原田|ミネルバ|ロンザン|買いました|企業と連携|個々の専門性|給料が良い|ビズプラットフォーム|ビズ時|やあらた|らななな|早苗地獄|木村拓哉|ルーも|ジョブリーチ|APEX|多分$|有名$|奈$|社長会長級|部長.*本部長|ゃなやまやま|やなさやさまさ|かやかやかや|なまなわなわなを|らはやは|うｒずｒ|ぐっづ|らまらならな|ゃ\/|zjぉ|oooi|Gtg|GRG|Fcc|なぜウェリントン|なやん$|かさ$|かな$|なや$|なあ$|なひ$|なは$|かあ$|なぢ$|かお$|ばい$|びえ$|ひあ$|なす$|あう$|かし$)$/i;
 
         // Lookup map
         const LOOKUP = new Map();
@@ -1247,6 +1270,12 @@
         const AWARENESS_ENTRIES = Object.entries(AWARENESS_OPTION_INDEX).filter(([, service]) => !NO_SELECTION_KEYS.has(service));
         const PANEL_SERVICE_ENTRIES = Object.entries(PANEL_SERVICE_INDEX);
         const CHANNEL_ENTRIES = Object.entries(CHANNEL_OPTION_INDEX).filter(([, label]) => !NO_SELECTION_KEYS.has(label));
+
+        // Labels for Q10-Q17 crosstab
+        const CORP_INDEX = { 1:'JAC Recruitment', 2:'PERSOL Holdings', 3:'RECRUIT Holdings', 4:'マイナビ', 5:'エン・ジャパン', 6:'BizReach', 7:'Michael Page', 8:'Robert Walters', 9:'Hays' };
+        const Q15_OPTION = { 1:'信頼性がある',2:'安定性がある',3:'財務内容がすぐれている',4:'経営者がすぐれている',5:'コーポレート・ガバナンス',6:'安心・安全',7:'社会から尊敬',8:'成長力',9:'活気',10:'社会の変化に対応',11:'新分野進出',12:'優秀な人材',13:'国際的ビジネス',14:'個性',15:'知的で洗練',16:'親しみやすい',17:'顧客ニーズ対応',18:'提案力',19:'専門性/プロ',20:'求人の質',21:'サステナビリティ',22:'D&I',23:'女性活躍',24:'社会的評価',25:'伝統',26:'品格',27:'社会に活力',28:'その他',29:'特にない' };
+        const Q16_OPTION = { 1:'ハイクラスの転職に強い',2:'創業50年の実績',3:'満足度7年連続No.1',4:'コンサルタントが双方にコンタクト',5:'採用ニーズを深く把握',6:'キャリアアップ支援',7:'専門・スペシャリスト',8:'外資系企業',9:'グローバル企業',10:'業界・職種特化' };
+        const Q17_OPTION = { 1:'プライベート優先',2:'自分のペース',3:'仕事優先',4:'チャレンジ',5:'ルーティンワーク',6:'誰かのため',7:'やりたいこと実現',8:'他人に評価',9:'アイディア活用',10:'独立',11:'長期キャリア',12:'リーダーシップ',13:'指示に従う',14:'高い地位',15:'出世不要',16:'面白い仕事なら低収入OK',17:'面白くても収入必要',18:'仕事は稼ぐ手段',19:'一人で黙々',20:'チーム協力',21:'オープンな職場',22:'昇進昇給で転職',23:'条件良ければ転職',24:'新しい能力発見',25:'職種は変えず専門性',26:'一つの仕事を長く',27:'短期間転職は良くない',28:'ライフワーク出会い',29:'したい仕事なら転職',30:'転職抵抗なし',31:'あてはまるものはない' };
 
         function createServiceFocusEntry() {
             return {
@@ -1357,11 +1386,14 @@
 
             // ランダム・ノイズ判定
             if (/(.)\1{4,}/.test(sc)) return null;                          // 同一文字連続5以上
-            if (/^[ぁ-ん]{1,3}$/.test(sc) && !/^(えん|えんにし)$/.test(sc)) return null; // 短いひらがな
+            if (/^[ぁ-ん]{1,4}$/.test(sc) && !/^(えん|えんにし|びず|いんでぃーど)$/.test(sc)) return null; // 短いひらがな(4文字以下)
             if (/^[a-z0-9]{1,3}$/i.test(sc)) return null;                   // 3文字以下の英数字
             if (/^[ぁ-んァ-ン一-龯]{1}$/.test(sc)) return null;             // 1文字の日本語
+            if (/^[ァ-ン]{2}$/.test(sc) && !/^(エン)$/.test(sc)) return null; // 2文字カタカナ（エン以外）
             // 長い繰り返し（やたやたやた…）
-            if (/^(.{1,5})\1{3,}$/.test(sc)) return null;
+            if (/^(.{1,5})\1{2,}$/.test(sc)) return null;                   // 繰り返し2回以上
+            // 混在ゴミ（英数+ひらがな+記号の意味不明な組合せ）
+            if (/^[a-zぁ-ん0-9\W]{2,8}$/i.test(sc) && !/[a-z]{3,}/i.test(sc) && !/[ぁ-ん]{3,}/.test(sc)) return null;
 
             // NFKC正規化キー
             const key = normalizedKey;
@@ -2972,27 +3004,58 @@
             return def.labels?.[rawVal] || `(${rawVal})`;
         }
 
+        // Helper to build flag/score index arrays
+        function buildFlagIdxs(headers, prefix, max) {
+            const arr = [];
+            for (let i = 1; i <= max; i++) { const idx = headers.indexOf(prefix + i); if (idx !== -1) arr.push({ n: i, idx }); }
+            return arr;
+        }
+        function buildMatrixIdxs(headers, prefix, itemMax, optMax) {
+            const arr = [];
+            for (let s = 1; s <= itemMax; s++) for (let o = 1; o <= optMax; o++) {
+                const idx = headers.indexOf(`${prefix}${s}_${o}`);
+                if (idx !== -1) arr.push({ s, o, idx });
+            }
+            return arr;
+        }
+
+        const ALL_Q_KEYS = ['Q1','Q2','Q3','Q4','Q5','Q7','Q8','Q10','Q11','Q12','Q13','Q14','Q15','Q16','Q17'];
+
         async function buildCrossTabData(rows, onProgress) {
             if (!rows || rows.length < 2) return null;
             _crossTabRawRows = rows;
             const opts = getCrosstabOptions();
             const headers = rows[0].map(h => String(h).trim());
 
-            // Column indexes
             const q1AllIdxs = ['Q1S1FA','Q1S2FA','Q1S3FA','Q1S4FA','Q1S5FA'].map(h => headers.indexOf(h)).filter(i => i !== -1);
             const q2AllIdxs = ['Q2S1FA','Q2S2FA','Q2S3FA','Q2S4FA','Q2S5FA'].map(h => headers.indexOf(h)).filter(i => i !== -1);
             const q1Idxs = opts.recallScope === 'first' ? q1AllIdxs.slice(0, 1) : q1AllIdxs;
             const q2Idxs = opts.recallScope === 'first' ? q2AllIdxs.slice(0, 1) : q2AllIdxs;
-            const q3Idxs = []; for (let i = 1; i <= 30; i++) { const idx = headers.indexOf('Q3_' + i); if (idx !== -1) q3Idxs.push({ n: i, idx }); }
-            const q4Idxs = []; for (let i = 1; i <= 30; i++) { const idx = headers.indexOf('Q4_' + i); if (idx !== -1) q4Idxs.push({ n: i, idx }); }
-            const q5Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q5S' + i); if (idx !== -1) q5Idxs.push({ n: i, idx }); }
-            const q7Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q7S' + i); if (idx !== -1) q7Idxs.push({ n: i, idx }); }
-            const q8Idxs = []; for (let i = 1; i <= 17; i++) { const idx = headers.indexOf('Q8S' + i); if (idx !== -1) q8Idxs.push({ n: i, idx }); }
+            const flagSets = {
+                Q3: buildFlagIdxs(headers, 'Q3_', 30), Q4: buildFlagIdxs(headers, 'Q4_', 30),
+                Q17: buildFlagIdxs(headers, 'Q17_', 31),
+            };
+            const scoreSets = {
+                Q5: buildFlagIdxs(headers, 'Q5S', 17), Q7: buildFlagIdxs(headers, 'Q7S', 17), Q8: buildFlagIdxs(headers, 'Q8S', 17),
+                Q12: buildFlagIdxs(headers, 'Q12S', 9), Q13: buildFlagIdxs(headers, 'Q13S', 9), Q14: buildFlagIdxs(headers, 'Q14S', 9),
+                Q16: buildFlagIdxs(headers, 'Q16S', 10),
+            };
+            // Q10/Q11: 2 items × 30 options (flags); Q15: 9 corps × 29 options (flags)
+            const matrixSets = {
+                Q10: buildMatrixIdxs(headers, 'Q10S', 2, 30),
+                Q11: buildMatrixIdxs(headers, 'Q11S', 2, 30),
+                Q15: buildMatrixIdxs(headers, 'Q15S', 9, 29),
+            };
 
             const cells = new Map();
+            const emptyQ = () => {
+                const o = {};
+                for (const k of ALL_Q_KEYS) o[k] = {};
+                return o;
+            };
             const getCell = (name) => {
                 if (cells.has(name)) return cells.get(name);
-                const c = { count: 0, Q1: {}, Q2: {}, Q3: {}, Q4: {}, Q5: {}, Q7: {}, Q8: {} };
+                const c = { count: 0, ...emptyQ() };
                 cells.set(name, c);
                 return c;
             };
@@ -3010,20 +3073,22 @@
                     const cell = getCell(grp);
                     total.count++; cell.count++;
 
-                    // Q1
+                    // Q1/Q2 free-text
                     const q1Set = new Set();
                     for (const idx of q1Idxs) { const v = normalizeText(row[idx]); if (v) q1Set.add(v); }
                     for (const svc of q1Set) { allQ1Svcs.add(svc); total.Q1[svc] = (total.Q1[svc] || 0) + 1; cell.Q1[svc] = (cell.Q1[svc] || 0) + 1; }
-                    // Q2
                     const q2Set = new Set();
                     for (const idx of q2Idxs) { const v = normalizeText(row[idx]); if (v) q2Set.add(v); }
                     for (const svc of q2Set) { allQ2Svcs.add(svc); total.Q2[svc] = (total.Q2[svc] || 0) + 1; cell.Q2[svc] = (cell.Q2[svc] || 0) + 1; }
-                    // Q3/Q4 flags
-                    for (const { n, idx } of q3Idxs) { if (String(row[idx]).trim() === '1') { total.Q3[n] = (total.Q3[n] || 0) + 1; cell.Q3[n] = (cell.Q3[n] || 0) + 1; } }
-                    for (const { n, idx } of q4Idxs) { if (String(row[idx]).trim() === '1') { total.Q4[n] = (total.Q4[n] || 0) + 1; cell.Q4[n] = (cell.Q4[n] || 0) + 1; } }
-                    // Q5/Q7/Q8 scores
-                    for (const qk of ['Q5', 'Q7', 'Q8']) {
-                        const idxs = qk === 'Q5' ? q5Idxs : qk === 'Q7' ? q7Idxs : q8Idxs;
+
+                    // Flag questions
+                    for (const [qk, idxs] of Object.entries(flagSets)) {
+                        for (const { n, idx } of idxs) {
+                            if (String(row[idx]).trim() === '1') { total[qk][n] = (total[qk][n] || 0) + 1; cell[qk][n] = (cell[qk][n] || 0) + 1; }
+                        }
+                    }
+                    // Score questions
+                    for (const [qk, idxs] of Object.entries(scoreSets)) {
                         for (const { n, idx } of idxs) {
                             const val = parseFloat(row[idx]);
                             if (!isNaN(val) && val > 0) {
@@ -3031,6 +3096,16 @@
                                 if (!cell[qk][n]) cell[qk][n] = { sum: 0, cnt: 0 };
                                 total[qk][n].sum += val; total[qk][n].cnt++;
                                 cell[qk][n].sum += val; cell[qk][n].cnt++;
+                            }
+                        }
+                    }
+                    // Matrix flag questions (Q10/Q11/Q15) — flatten to "s_o" keys
+                    for (const [qk, idxs] of Object.entries(matrixSets)) {
+                        for (const { s, o, idx } of idxs) {
+                            if (String(row[idx]).trim() === '1') {
+                                const key = s + '_' + o;
+                                total[qk][key] = (total[qk][key] || 0) + 1;
+                                cell[qk][key] = (cell[qk][key] || 0) + 1;
                             }
                         }
                     }
@@ -3043,7 +3118,29 @@
             const groupNames = ['全体', ...[...cells.keys()].filter(k => k !== '全体').sort((a, b) => (cells.get(b)?.count || 0) - (cells.get(a)?.count || 0))];
 
             _crossTabData = { cells, groupNames, q1Svcs: sortByTotal(allQ1Svcs, 'Q1'), q2Svcs: sortByTotal(allQ2Svcs, 'Q2') };
+            buildGroupFilterUI(groupNames);
             return _crossTabData;
+        }
+
+        // Group filter UI
+        let _ctFilterSet = new Set(); // checked groups
+        function buildGroupFilterUI(groupNames) {
+            _ctFilterSet = new Set(groupNames);
+            const container = document.getElementById('ctGroupFilter');
+            if (!container) return;
+            container.innerHTML = groupNames.map(gn => {
+                const disabled = gn === '全体' ? 'disabled' : '';
+                const checked = 'checked';
+                return `<label class="flex items-center gap-1 cursor-pointer bg-white border border-gray-200 rounded px-2 py-0.5"><input type="checkbox" ${checked} ${disabled} value="${escHtml(gn)}" onchange="onGroupFilterChange(this)"><span>${escHtml(gn)}</span></label>`;
+            }).join('');
+        }
+        function onGroupFilterChange(cb) {
+            if (cb.checked) _ctFilterSet.add(cb.value); else _ctFilterSet.delete(cb.value);
+            renderCrossTab(_currentCrosstabQ);
+        }
+        function getFilteredGroupNames() {
+            if (!_crossTabData) return [];
+            return _crossTabData.groupNames.filter(gn => _ctFilterSet.has(gn));
         }
 
         async function onCrosstabOptionChange() {
@@ -3066,9 +3163,44 @@
                 const keys = Array.from({ length: 30 }, (_, i) => i + 1);
                 return { keys, labels: keys.map(n => AWARENESS_OPTION_INDEX[n] || (qKey + '_' + n)), isScore: false };
             }
-            // Q5, Q7, Q8
-            const keys = Array.from({ length: 17 }, (_, i) => i + 1);
-            return { keys, labels: keys.map(n => PANEL_SERVICE_INDEX[n] || ('S' + n)), isScore: true };
+            if (qKey === 'Q5' || qKey === 'Q7' || qKey === 'Q8') {
+                const keys = Array.from({ length: 17 }, (_, i) => i + 1);
+                return { keys, labels: keys.map(n => PANEL_SERVICE_INDEX[n] || ('S' + n)), isScore: true };
+            }
+            if (qKey === 'Q10') {
+                // S1=利用したサービス(MA), S2=最も利用(SA) — show S1 only (flag)
+                const keys = Array.from({ length: 30 }, (_, i) => '1_' + (i + 1));
+                return { keys, labels: keys.map(k => AWARENESS_OPTION_INDEX[parseInt(k.split('_')[1])] || k), isScore: false };
+            }
+            if (qKey === 'Q11') {
+                // S1=あてはまるもの(MA), S2=最もあてはまる(SA) — show S1 only (flag)
+                const keys = Array.from({ length: 30 }, (_, i) => '1_' + (i + 1));
+                const labels = Array.from({ length: 30 }, (_, i) => {
+                    const n = i + 1;
+                    // Reuse Q9 option labels (same 30 items) - they're image attributes
+                    return { 1:'大手',2:'信頼',3:'昔から知っている',4:'先進的',5:'企業情報に詳しい',6:'口コミ良い',7:'周囲の評判',8:'親身',9:'洗練',10:'ハイクラス向け',11:'実績',12:'求人数多い',13:'求人質高い',14:'非公開求人',15:'独自求人',16:'対応エリア広い',17:'業界情報強い',18:'グローバル求人',19:'コンサルタント対応',20:'キャリアプラン提案',21:'選考サポート',22:'求人マッチ',23:'交渉力',24:'転職後フォロー',25:'過去に良かった',26:'使いやすい',27:'サイト/アプリ使い勝手',28:'役立つ情報',29:'その他',30:'特になし' }[n] || ('Q11_' + n);
+                });
+                return { keys, labels, isScore: false };
+            }
+            if (qKey === 'Q12' || qKey === 'Q13' || qKey === 'Q14') {
+                const keys = Array.from({ length: 9 }, (_, i) => i + 1);
+                return { keys, labels: keys.map(n => CORP_INDEX[n] || ('S' + n)), isScore: true };
+            }
+            if (qKey === 'Q15') {
+                // 9 corps × 29 options — show S1 (JAC) only for now, or flatten
+                // Show only JAC (S1) across 29 image attributes
+                const keys = Array.from({ length: 29 }, (_, i) => '1_' + (i + 1));
+                return { keys, labels: keys.map(k => Q15_OPTION[parseInt(k.split('_')[1])] || k), isScore: false };
+            }
+            if (qKey === 'Q16') {
+                const keys = Array.from({ length: 10 }, (_, i) => i + 1);
+                return { keys, labels: keys.map(n => Q16_OPTION[n] || ('S' + n)), isScore: true };
+            }
+            if (qKey === 'Q17') {
+                const keys = Array.from({ length: 31 }, (_, i) => i + 1);
+                return { keys, labels: keys.map(n => Q17_OPTION[n] || ('Q17_' + n)), isScore: false };
+            }
+            return { keys: [], labels: [], isScore: false };
         }
 
         function renderCrossTab(qKey) {
@@ -3077,9 +3209,11 @@
             if (!_crossTabData) { table.classList.add('hidden'); empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden'); table.classList.remove('hidden');
 
-            const { cells, groupNames } = _crossTabData;
+            const { cells } = _crossTabData;
+            const groupNames = getFilteredGroupNames();
             const { keys: colKeys, labels: colLabels, isScore } = getColDefs(qKey);
             const displayMode = getCrosstabOptions().displayMode;
+            const decimals = parseInt(document.getElementById('ctDecimals')?.value || '1');
             const groupByLabel = document.getElementById('ctGroupBy').selectedOptions[0]?.textContent || 'グループ';
 
             // Max for heatmap
@@ -3111,14 +3245,14 @@
                     if (isScore) {
                         const entry = qData[k];
                         if (entry && entry.cnt > 0) {
-                            const avg = (entry.sum / entry.cnt).toFixed(2);
+                            const avg = (entry.sum / entry.cnt).toFixed(decimals);
                             tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs">${avg}<span class="text-gray-400 ml-0.5">(${entry.cnt})</span></td>`;
                         } else {
                             tds += `<td class="py-1.5 px-3 border-b border-slate-100 text-right text-xs text-gray-300">-</td>`;
                         }
                     } else {
                         const val = qData[k] || 0;
-                        const pct = n > 0 ? (val / n * 100).toFixed(1) : '0.0';
+                        const pct = n > 0 ? (val / n * 100).toFixed(decimals) : (0).toFixed(decimals);
                         const intensity = maxVal > 0 ? Math.min(val / maxVal, 1) : 0;
                         const bg = val > 0 ? `rgba(99,102,241,${0.05 + intensity * 0.25})` : '';
                         let cellText;
@@ -3138,8 +3272,10 @@
 
         function downloadCrossTabExcel() {
             if (!_crossTabData) return;
-            const { cells, groupNames } = _crossTabData;
+            const { cells } = _crossTabData;
+            const groupNames = getFilteredGroupNames();
             const opts = getCrosstabOptions();
+            const decimals = parseInt(document.getElementById('ctDecimals')?.value || '1');
             const groupByLabel = document.getElementById('ctGroupBy').selectedOptions[0]?.textContent || 'グループ';
             const recallLabel = opts.recallScope === 'first' ? '第一想起のみ' : '全体想起';
             const wb = XLSX.utils.book_new();
@@ -3152,6 +3288,14 @@
                 { key: 'Q5', label: 'Q5_認知度' },
                 { key: 'Q7', label: 'Q7_関心度' },
                 { key: 'Q8', label: 'Q8_利用意向' },
+                { key: 'Q10', label: 'Q10_利用サービス' },
+                { key: 'Q11', label: 'Q11_重視点' },
+                { key: 'Q12', label: 'Q12_企業認知' },
+                { key: 'Q13', label: 'Q13_企業魅力' },
+                { key: 'Q14', label: 'Q14_働きたい' },
+                { key: 'Q15', label: 'Q15_企業イメージ' },
+                { key: 'Q16', label: 'Q16_JAC特徴' },
+                { key: 'Q17', label: 'Q17_価値観' },
             ];
 
             for (const def of sheetDefs) {
@@ -3186,14 +3330,14 @@
                         const avgs = [], cnts = [];
                         for (const k of colKeys) {
                             const e = qData[k];
-                            if (e && e.cnt > 0) { avgs.push(+(e.sum / e.cnt).toFixed(2)); cnts.push(e.cnt); }
+                            if (e && e.cnt > 0) { avgs.push(+(e.sum / e.cnt).toFixed(decimals)); cnts.push(e.cnt); }
                             else { avgs.push(''); cnts.push(0); }
                         }
                         rowArr.push(...avgs, ...cnts);
                     } else {
                         for (const k of colKeys) {
                             const val = qData[k] || 0;
-                            const pct = n > 0 ? +(val / n * 100).toFixed(1) : 0;
+                            const pct = n > 0 ? +(val / n * 100).toFixed(decimals) : 0;
                             if (opts.displayMode === 'count') rowArr.push(val);
                             else if (opts.displayMode === 'pct') rowArr.push(pct);
                             else { rowArr.push(val); rowArr.push(pct); }
