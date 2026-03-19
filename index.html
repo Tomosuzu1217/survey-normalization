@@ -870,6 +870,14 @@
                 </div>
                 <!-- Q sub-tabs -->
                 <div id="crosstabSubTabs" class="flex gap-1.5 flex-wrap">
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SEX" onclick="selectCrosstabQ('SEX',this)">性別</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="AGEID" onclick="selectCrosstabQ('AGEID',this)">年齢</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="MARRIED" onclick="selectCrosstabQ('MARRIED',this)">未既婚</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="CHILD" onclick="selectCrosstabQ('CHILD',this)">子供</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ3" onclick="selectCrosstabQ('SQ3',this)">年収</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ4" onclick="selectCrosstabQ('SQ4',this)">役職</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ5" onclick="selectCrosstabQ('SQ5',this)">転職意向</button>
+                    <span class="w-px h-5 bg-gray-300 mx-0.5"></span>
                     <button class="tab-btn active text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q1" onclick="selectCrosstabQ('Q1',this)">Q1 想起(HC)</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q2" onclick="selectCrosstabQ('Q2',this)">Q2 想起(EX)</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q3" onclick="selectCrosstabQ('Q3',this)">Q3 認知(HC)</button>
@@ -3019,7 +3027,16 @@
             return arr;
         }
 
-        const ALL_Q_KEYS = ['Q1','Q2','Q3','Q4','Q5','Q7','Q8','Q10','Q11','Q12','Q13','Q14','Q15','Q16','Q17'];
+        const ALL_Q_KEYS = ['SEX','AGEID','MARRIED','CHILD','SQ3','SQ4','SQ5','Q1','Q2','Q3','Q4','Q5','Q7','Q8','Q10','Q11','Q12','Q13','Q14','Q15','Q16','Q17'];
+        const DEMO_COL_DEFS = {
+            SEX:     { header: 'SEX',     labels: { 1:'男性', 2:'女性' } },
+            AGEID:   { header: 'AGEID',   labels: { 1:'12才未満',2:'12-19才',3:'20-24才',4:'25-29才',5:'30-34才',6:'35-39才',7:'40-44才',8:'45-49才',9:'50-54才',10:'55-59才',11:'60才以上' } },
+            MARRIED: { header: 'MARRIED', labels: { 1:'未婚', 2:'既婚' } },
+            CHILD:   { header: 'CHILD',   labels: { 1:'子供なし', 2:'子供あり' } },
+            SQ3:     { header: 'SQ3',     labels: Object.fromEntries(Array.from({length:19},(_, i)=>[(i+1), ['200万未満','200-300万','300-400万','400-500万','500-600万','600-700万','700-800万','800-900万','900-1000万','1000-1100万','1100-1200万','1200-1300万','1300-1500万','1500-2000万','2000-2500万','2500-3000万','3000万以上','わからない','答えたくない'][i] || (''+(i+1))])) },
+            SQ4:     { header: 'SQ4',     labels: { 1:'役員クラス以上',2:'本部長・事業部長',3:'部長',4:'課長',5:'係長・主任',6:'一般社員',7:'契約・派遣',8:'その他' } },
+            SQ5:     { header: 'SQ5',     labels: { 1:'3ヶ月以内',2:'半年以内',3:'1年以内',4:'2-3年以内',5:'時期未定',6:'転職なし(経験あり)',7:'転職なし(経験なし)' } },
+        };
 
         async function buildCrossTabData(rows, onProgress) {
             if (!rows || rows.length < 2) return null;
@@ -3059,6 +3076,13 @@
                 cells.set(name, c);
                 return c;
             };
+            // Demographic column indexes
+            const demoColIdxs = {};
+            for (const [dk, def] of Object.entries(DEMO_COL_DEFS)) {
+                const idx = headers.indexOf(def.header);
+                if (idx !== -1) demoColIdxs[dk] = idx;
+            }
+
             const allQ1Svcs = new Set(), allQ2Svcs = new Set();
             const totalRows = rows.length - 1;
             const batchSize = totalRows > 20000 ? 2000 : 800;
@@ -3109,6 +3133,14 @@
                             }
                         }
                     }
+                    // Demographic frequency (SEX, AGEID, MARRIED, CHILD, SQ3, SQ4, SQ5)
+                    for (const [dk, colIdx] of Object.entries(demoColIdxs)) {
+                        const v = parseInt(row[colIdx]);
+                        if (!isNaN(v) && v > 0) {
+                            total[dk][v] = (total[dk][v] || 0) + 1;
+                            cell[dk][v] = (cell[dk][v] || 0) + 1;
+                        }
+                    }
                 }
                 if (onProgress) onProgress(end, totalRows);
                 await new Promise(resolve => setTimeout(resolve, 0));
@@ -3157,6 +3189,13 @@
         }
 
         function getColDefs(qKey) {
+            // Demographic columns
+            if (DEMO_COL_DEFS[qKey]) {
+                const def = DEMO_COL_DEFS[qKey];
+                const labelMap = def.labels;
+                const allKeys = Object.keys(labelMap).map(Number).sort((a, b) => a - b);
+                return { keys: allKeys, labels: allKeys.map(k => labelMap[k] || ('' + k)), isScore: false };
+            }
             if (qKey === 'Q1') return { keys: _crossTabData.q1Svcs, labels: _crossTabData.q1Svcs, isScore: false };
             if (qKey === 'Q2') return { keys: _crossTabData.q2Svcs, labels: _crossTabData.q2Svcs, isScore: false };
             if (qKey === 'Q3' || qKey === 'Q4') {
@@ -3281,6 +3320,13 @@
             const wb = XLSX.utils.book_new();
 
             const sheetDefs = [
+                { key: 'SEX', label: '性別' },
+                { key: 'AGEID', label: '年齢' },
+                { key: 'MARRIED', label: '未既婚' },
+                { key: 'CHILD', label: '子供' },
+                { key: 'SQ3', label: '年収' },
+                { key: 'SQ4', label: '役職' },
+                { key: 'SQ5', label: '転職意向' },
                 { key: 'Q1', label: 'Q1_ハイクラス想起' },
                 { key: 'Q2', label: 'Q2_エグゼクティブ想起' },
                 { key: 'Q3', label: 'Q3_ハイクラス認知' },
