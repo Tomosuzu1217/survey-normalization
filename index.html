@@ -932,6 +932,7 @@
                     'bizuri-chi', 'bizurichi', 'bisuriichi', 'ビズリーチビズリーチ', 'ビズ', 'biz',
                     'ビズリーチ（bizreach）', 'ビズリーチ（bizreach）エグゼクティブ',
                     'Bizリーチ', 'bizリーチ', 'ビズりーち', 'びずリーチ',
+                    'bizsearch', 'びず',
                 ], fuzzy: [
                     /b[a-z]*[- ]?r[eai][a-z]*ch/i,
                     /[ビビびビ][ズずスす].{0,3}[リりリ].{0,2}[チちチ]/u,
@@ -961,7 +962,7 @@
                     'どゆわーだ', 'ドューダ', 'デユーダ', 'でゅーだー', 'ドゥダ', 'でゅ-だ',
                     'ドゥーだ', 'どぅーだ', 'どぅださ',
                 ], fuzzy: [
-                    /^d[ouaã]?d[ouaã]?[a-z]?$/i,
+                    /^d[ou]d[oua]?$/i,
                     /^デ[ュゅ][ーウ]ダ$/,
                     /^ド[ゥぅ][ーウ]?ダ$/,
                 ]
@@ -977,7 +978,7 @@
                     'jacリクルートめんと', 'jacリクルートメンと',
                     'jrクルートメント', 'jac リクルート',
                 ], fuzzy: [
-                    /^j[aoa][ckrg][\s.]?(r[e]?c[r]?)?/i,
+                    /^j[ao][ckrg][\s.]?(r[e]?c[r]?u?i?t?i?n?g?)?$/i,
                 ]
             },
 
@@ -1008,7 +1009,7 @@
                     'リクルートエイジェント', 'リクルートaじぇんんと', 'リクルートスカウト',
                     'リクルートスタッフィング', 'リクルート エージェント',
                     'recruiteragent', 'recruit agent',
-                    'リクルートエージェント?', 'リクルートaじぇんんと',
+                    'リクルートエージェント?',
                 ], fuzzy: [
                     /リクルート.{0,4}エージェント/,
                     /recruit.{0,6}agent/i,
@@ -1114,8 +1115,8 @@
 
             {
                 name: 'クライス＆カンパニー', variants:
-                    ['クライスアンドカンパニー', 'クライス＆カンパニー', 'クライス&カンパニー', 'クライス'],
-                fuzzy: [/クライス/]
+                    ['クライスアンドカンパニー', 'クライス＆カンパニー', 'クライス&カンパニー', 'クライス', 'kreis', 'kreis&company'],
+                fuzzy: [/クライス/, /^kreis/i]
             },
 
             {
@@ -1149,13 +1150,13 @@
             { name: 'ギークリー', variants: ['ギークリー', 'ギークリ'], fuzzy: [/ギークリ/] },
             { name: 'Findy', variants: ['findy'], fuzzy: [/^findy$/i] },
             { name: 'ムービン', variants: ['ムービン', 'ムーヴィン'], fuzzy: [/ムービン/] },
-            { name: 'コトラ', variants: ['コトラ'], fuzzy: [] },
+            { name: 'コトラ', variants: ['コトラ', 'kotora'], fuzzy: [/^kotora$/i] },
             { name: 'CxOサーチ', variants: ['cxoサーチ', 'cxo'], fuzzy: [/cxo/i] },
             { name: 'Professional Bank', variants: ['professional bank', 'professionalbank'], fuzzy: [/professional\s*bank/i] },
             { name: '縄文アソシエイツ', variants: ['縄文アソシエイツ'], fuzzy: [] },
             { name: 're就活', variants: ['re就活'], fuzzy: [/re就活/i] },
             { name: 'ハイパーダイレクトスカウト', variants: ['ハイパーダイレクトスカウト'], fuzzy: [] },
-            { name: 'AXISコンサルティング', variants: ['axisエージェント', 'axis'], fuzzy: [/axis.{0,5}(エージェント|agent)/i] },
+            { name: 'アクシスコンサルティング', variants: ['アクシスコンサルティング', 'axisエージェント', 'axisコンサルティング', 'axis'], fuzzy: [/axis.{0,5}(エージェント|agent|コンサル)/i, /アクシスコンサル/] },
             { name: 'コンコード', variants: ['コンコード'], fuzzy: [] },
             { name: 'インスパイア', variants: ['インスパイア'], fuzzy: [] },
             { name: 'パーソル', variants: ['パーソル', 'パーソルキャリア'], fuzzy: [/パーソル/] },
@@ -1169,7 +1170,8 @@
         const GENERIC_TERMS_RE = /^(ヘッドハンティング|ヘッドハンター|ヘッドハント|ベッドハンティング|ヘットハンティング|転職エージェント|転職支援|転職ナビ|転職サイト|転職|スカウト|スカウトサービス|スカウト会社|求人オファー|マッチング|マッチングサービス|エージェント|外資系|高額案件|高収入|高給料|高年収|年収[^\s]*|管理職|管理職ポストの転職|部長.*転職|社長.*転職|取締役|ハイクラス(転職|の転職|向け転職|案件)?|エグゼクティブ(転職|案件|案内|案件の紹介)?|ハイマネジメント|非公開求人|個人対応|個別対応|シニア対応|CxOクラス|リテイナーサーチ|サーチファーム|ハイプロ|ダイレクトリクルーティング|支援|ハイ転職|専門性|即戦力|求人|クラス|スタッフサービス)$/i;
 
         // 不明・無効（集計から除外）とみなすパターン
-        const INVALID_RE = /^(なし|とくに|特に|ない|無い|無し|なきか|なき|なさ|わから|分から|解ら|判ら|わかな|わかない|わならない|思い(出せ|浮かば|つか|付か|きらない|ません|つかなち)|知(ら|りません)|しらな|ありません|ありがとう|よろしく|不明|ふめい|none|ok|nan|使いやす|ナッシング|興味ない|何も知らな|ハードルが高|検討したい|多々ある|全部|プラチナ|高い$|高額$|即戦力$|ハイクラス$|です$|ます$|いたします|覚えてな|浮かばな|です。|ます。|ないです|ないです。|ない。|ないない|しらない|しらなし|興味な|とくにな|よく知らな|いろいろ|リクエスト|時なし|転機|不動産|東レ|楽天|Amazon|Google|LINE|au|ソニー|サントリー|旭化成|ベンツ|ベンツアウディ|サイバーエージェント|タウンワーク|バイトル|日清食品|じゃらん|はたらいく|日経キャリア|日経|ロビー|万パワー|メビウス|コスパフォーマンス|コストパフォーマンス|タイプ$|ラウンジ$|チーム$|カーバー|サイマル|マリナビ都電|タイタン$|バラク|クリアファイル|とらーゆ|とらばーゆ|パラジウム|ベンチアウティ|ダービン|ファイヤー(エイメッカー|ジェイデッカー)|雰囲気|好きではない|ずっと同じ人が|昇給できる|厳選された求人|資料が多い|使いやすい|ハードルが高い|ありがとうございます|わかりません。?|知らないです|知らない|今(は)?すぐに出ない|分かりません|特に思い浮か(ば|び)ません|特に何も(思い)?浮かばない|すぐには思い(浮か|付き)ません|年収(いくら|アップ)|中途採用|エグゼクティブ案件の紹介|管理職向け(転職)?|よろしくお願いいたします|らなななな|かやかやかやか|なまなわなわ|あいでや|あいでる|やたやたやた|ベンダウディ|たやたやて|たやたはた|らのっぼ|zj|Jvuuggf|Vuuvvuvuc|t k k|いxkcm|いぢxkcm|わにやな|なさわざな|なんさわさなわさかわ|んさわさなわかわかわ|りしょうかつ|りしゅうかつ|邦文と連絡|高年収$|高給料|やたやた|なななな|まなまは|特になし。?|特にない。?|特にはない|特ににし|特なになし|特にありません。?|特にございません|とくになし|とくにない|とくにありません|とくになき|とくｗ|思い浮かびません|分からないです。?|分りません|分からな$|忘れた|原田|ミネルバ|ロンザン|買いました|企業と連携|個々の専門性|給料が良い|ビズプラットフォーム|ビズ時|やあらた|らななな|早苗地獄|木村拓哉|ルーも|ジョブリーチ|APEX|多分$|有名$|奈$|社長会長級|部長.*本部長|ゃなやまやま|やなさやさまさ|かやかやかや|なまなわなわなを|らはやは|うｒずｒ|ぐっづ|らまらならな|ゃ\/|zjぉ|oooi|Gtg|GRG|Fcc|なぜウェリントン|なやん$|かさ$|かな$|なや$|なあ$|なひ$|なは$|かあ$|なぢ$|かお$|ばい$|びえ$|ひあ$|なす$|あう$|かし$)$/i;
+        // NOTE: 語幹パターンは (ない|ません|ないです|ません。?)? の任意語尾付きで照合
+        const INVALID_RE = /^(なし|とくに|特に|ない|無い|無し|なきか|なき|なさ|(わから|分から|解ら|判ら|わかな|わかない|わならない)(ない(です)?|ません。?)?|思い(出せ|浮かば|つか|付か|つき|きらない|きません|ません|つかなち)(ない|ません。?)?|(覚えて|浮かば)(ない|ません。?)?|(知(ら|り)|しらな)(ない(です)?|ません。?)?|(よく|何も)知ら(ない(です)?|ません。?)?|ありません|ありがとう(ございます。?)?|よろしく(お願い(いたし|し)ます。?)?|不明|ふめい|none|ok|nan|使いやす|ナッシング|興味(ない|な)|何も知らな|ハードルが高い?|検討したい|多々ある|全部|プラチナ|高い$|高額$|即戦力$|ハイクラス$|です$|ます$|いたします|です。|ます。|ないです。?|ない。|ないない|しらない|しらなし|とくにな|いろいろ|リクエスト|時なし|不動産|東レ|楽天|Amazon|Google|LINE|au|ソニー|サントリー|旭化成|ベンツ(アウディ)?|サイバーエージェント|タウンワーク|バイトル|日清食品|じゃらん|はたらいく|日経(キャリア)?|ロビー|万パワー|メビウス|コス[トパ]フォーマンス|コストパフォーマンス|タイプ$|ラウンジ$|チーム$|カーバー|サイマル|マリナビ都電|タイタン$|バラク|クリアファイル|とらーゆ|とらばーゆ|パラジウム|ベンチアウティ|ダービン|ファイヤー(エイメッカー|ジェイデッカー)|雰囲気|好きではない|ずっと同じ人(が|が担当)?|昇給できる|厳選された求人|資料が多い|使いやすい|知らないです|知らない|今(は)?すぐに出ない|分かりません|特に(思い)?浮か(ば|び)(ない|ません)|特に何も(思い)?浮かばない|すぐには思い(浮か|付き)ません|年収(いくら|アップ)|中途採用|エグゼクティブ案件の紹介|管理職向け(転職)?|無いです。?|らなななな|かやかやかやか|なまなわなわ|あいでや|あいでる|やたやたやた|ベンダウディ|たやたやて|たやたはた|らのっぼ|zj|Jvuuggf|Vuuvvuvuc|t k k|いxkcm|いぢxkcm|わにやな(や)?|なさわざな|なんさわさなわさかわ|んさわさなわかわかわ|りしょうかつ|りしゅうかつ|邦文と連絡|高年収$|高給料|やたやた|なななな|まなまは|特になし。?|特にない。?|特にはない|特ににし|特なになし|特にありません。?|特にございません。?|とくになし|とくにない|とくにありません|とくになき|とくｗ|思い浮かびません|分からないです。?|分りません|分からな$|忘れた|原田|ミネルバ|ロンザン|買いました|企業と連携|個々の専門性(に.+)?|給料が良い(企業.+)?|ビズプラットフォーム|ビズ時|やあらた|らななな、?|早苗地獄.*|木村拓哉.*|ルーも|ジョブリーチ|APEX|多分$|有名$|奈$|社長会長級|部長.*本部長|ゃなやまやま.*|やなさやさまさ.*|かやかやかや.*|なまなわなわなを|らはやは.*|うｒずｒ|ぐっづg?|らまらならな|ゃ\/|zjぉ.*|oooi|Gtg|GRG|Fcc|なぜウェリントン|オルティス.*|なやん$|かさ$|かな$|なや$|なあ$|なひ$|なは$|かあ$|なぢ$|かお$|ばい$|びえ$|ひあ$|なす$|あう$|かし$)$/i;
 
         // Lookup map
         const LOOKUP = new Map();
@@ -1275,6 +1277,30 @@
             ...Object.values(PANEL_SERVICE_INDEX),
             ...Object.values(AWARENESS_OPTION_INDEX).filter(v => !NO_SELECTION_KEYS.has(v)),
         ].map(name => [norm(name), name]));
+
+        // パネル名 → 辞書正規名マッピング（同一サービスの名前分裂を防止）
+        // 例: "BizReach" → "ビズリーチ", "RECRUIT AGENT" → "リクルートエージェント"
+        const PANEL_TO_CANONICAL = new Map();
+        for (const panelName of PANEL_LABEL_LOOKUP.values()) {
+            const nk = norm(panelName);
+            if (LOOKUP.has(nk)) {
+                PANEL_TO_CANONICAL.set(panelName, LOOKUP.get(nk));
+            } else {
+                // ファジーマッチも試行
+                for (const rule of SERVICE_DICT) {
+                    let matched = false;
+                    for (const re of rule.fuzzy) {
+                        if (re.test(panelName) || re.test(nk)) {
+                            PANEL_TO_CANONICAL.set(panelName, rule.name);
+                            matched = true; break;
+                        }
+                    }
+                    if (matched) break;
+                }
+            }
+        }
+        /** パネル名を辞書の正規名に統一する（辞書にない場合はそのまま返す） */
+        function canonicalName(name) { return PANEL_TO_CANONICAL.get(name) || name; }
         const AWARENESS_ENTRIES = Object.entries(AWARENESS_OPTION_INDEX).filter(([, service]) => !NO_SELECTION_KEYS.has(service));
         const PANEL_SERVICE_ENTRIES = Object.entries(PANEL_SERVICE_INDEX);
         const CHANNEL_ENTRIES = Object.entries(CHANNEL_OPTION_INDEX).filter(([, label]) => !NO_SELECTION_KEYS.has(label));
@@ -1379,54 +1405,90 @@
                 || /^(google|amazon|line|au)$/i.test(compact);
         }
 
+        // 正規化キャッシュ（同一入力値の再計算を防止: 66,000+回/1000行の重複呼出しを排除）
+        const _normCache = new Map();
+        const _NORM_CACHE_LIMIT = 50000;
+
+        // ステップ7用の正規表現を事前コンパイル（ループ内での再生成を回避）
+        const _RE_REPEAT5   = /(.)\1{4,}/;
+        const _RE_HIRA4     = /^[ぁ-ん]{1,4}$/;
+        const _RE_ALNUM3    = /^[a-z0-9]{1,3}$/i;
+        const _RE_JP1       = /^[ぁ-んァ-ン一-龯]{1}$/;
+        const _RE_KATA2     = /^[ァ-ン]{2}$/;
+        const _RE_REPEAT_UNIT = /^(.{1,5})\1{2,}$/;
+        const _RE_MIXED_JUNK = /^[a-zぁ-ん0-9\W]{2,8}$/i;
+        const _RE_HAS_ALPHA3 = /[a-z]{3,}/i;
+        const _RE_HAS_HIRA3 = /[ぁ-ん]{3,}/;
+        const _RE_ALL_SYMBOL = /^[!-/:-@[-`{-~]+$/;
+        const _RE_ALPHA_ONLY = /^[a-z]{3,}$/;
+        const _RE_SVC_KW    = /(recruit|doda|jac|biz|link|indeed|hays|ambi|findy)/i;
+        const _RE_NOANSWER2 = /(?:分から|わから|解ら|判ら|浮かば|覚えて|思い(?:出せ|浮かば|つか|付か)|知ら)(?:ない|ません|ないです)/;
+        const _RE_COMMENT   = /(?:コマーシャル|ありがとう|よろしく|おかしい|専門性|給料|ずっと同じ|企業を|ございません|担当[\?？]|&#\d+;)/;
+        const _RE_LONG_KANA = /^[ぁ-んァ-ンー、。？！\?!"'^;\/\-「」\s]+$/;
+
         function normalizeText(raw) {
             if (raw === null || raw === undefined || raw === '') return null;
             const s = String(raw).trim();
             if (!s) return null;
+
+            // キャッシュヒット（同じ文字列は2度計算しない）
+            const cached = _normCache.get(s);
+            if (cached !== undefined) return cached;
+
+            const result = _normalizeTextCore(s);
+
+            // キャッシュ格納（上限超過時はクリア）
+            if (_normCache.size >= _NORM_CACHE_LIMIT) _normCache.clear();
+            _normCache.set(s, result);
+            return result;
+        }
+
+        function _normalizeTextCore(s) {
             const normalizedKey = norm(s);
-            if (isOtherAnswer(s, normalizedKey)) return CAT_OTHER;
-            if (PANEL_LABEL_LOOKUP.has(normalizedKey)) return PANEL_LABEL_LOOKUP.get(normalizedKey);
 
-            const sc = s.replace(/[\s　]/g, '');
+            // 1. 明確な「無回答・不明」→ null（サービスではないので集計対象外）
+            if (isOtherAnswer(s, normalizedKey)) return null;
 
-            // 完全に無効なテキスト（集計対象外）
-            if (INVALID_RE.test(sc) || INVALID_RE.test(s)) return null;
+            // 2. 辞書完全一致（最優先: パネル名も辞書バリアントに含まれるため統一名を返す）
+            if (LOOKUP.has(normalizedKey)) return LOOKUP.get(normalizedKey);
 
-            // ランダム・ノイズ判定
-            if (/(.)\1{4,}/.test(sc)) return null;                          // 同一文字連続5以上
-            if (/^[ぁ-ん]{1,4}$/.test(sc) && !/^(えん|えんにし|びず|いんでぃーど)$/.test(sc)) return null; // 短いひらがな(4文字以下)
-            if (/^[a-z0-9]{1,3}$/i.test(sc)) return null;                   // 3文字以下の英数字
-            if (/^[ぁ-んァ-ン一-龯]{1}$/.test(sc)) return null;             // 1文字の日本語
-            if (/^[ァ-ン]{2}$/.test(sc) && !/^(エン)$/.test(sc)) return null; // 2文字カタカナ（エン以外）
-            // 長い繰り返し（やたやたやた…）
-            if (/^(.{1,5})\1{2,}$/.test(sc)) return null;                   // 繰り返し2回以上
-            // 混在ゴミ（英数+ひらがな+記号の意味不明な組合せ）
-            if (/^[a-zぁ-ん0-9\W]{2,8}$/i.test(sc) && !/[a-z]{3,}/i.test(sc) && !/[ぁ-ん]{3,}/.test(sc)) return null;
-
-            // NFKC正規化キー
-            const key = normalizedKey;
-
-            // 辞書完全一致
-            if (LOOKUP.has(key)) return LOOKUP.get(key);
-
-            // ファジーマッチ
+            // 3. ファジーマッチ（正規表現による部分一致）
             for (const rule of SERVICE_DICT) {
                 for (const re of rule.fuzzy) {
-                    if (re.test(s) || re.test(key)) return rule.name;
+                    if (re.test(s) || re.test(normalizedKey)) return rule.name;
                 }
             }
 
-            // 総称・一般用語 → その他・総称バケット
+            // 4. パネルサービス名完全一致（辞書にないサービスのみここに到達）
+            if (PANEL_LABEL_LOOKUP.has(normalizedKey)) return canonicalName(PANEL_LABEL_LOOKUP.get(normalizedKey));
+
+            // --- ここから先は辞書に該当しなかったテキストのフィルタリング ---
+            const sc = s.replace(/[\s　]/g, '');
+
+            // 5. 総称・一般用語 → その他（特定サービス名ではない）
             if (GENERIC_TERMS_RE.test(sc) || GENERIC_TERMS_RE.test(s)) return CAT_OTHER;
 
-            // 残り：文字数が2文字以上あればそのまま保持（未知サービス名）
-            // ただし純粋な英文記号列や無意味な文字列はドロップ
+            // 6. 完全に無効なテキスト（集計対象外）
+            if (INVALID_RE.test(sc) || INVALID_RE.test(s)) return null;
+
+            // 7. ランダム・ノイズ判定（事前コンパイル済みの正規表現を使用）
+            if (_RE_REPEAT5.test(sc)) return null;
+            if (_RE_HIRA4.test(sc)) return null;
+            if (_RE_ALNUM3.test(sc)) return null;
+            if (_RE_JP1.test(sc)) return null;
+            if (_RE_KATA2.test(sc)) return null;
+            if (_RE_REPEAT_UNIT.test(sc)) return null;
+            if (_RE_MIXED_JUNK.test(sc) && !_RE_HAS_ALPHA3.test(sc) && !_RE_HAS_HIRA3.test(sc)) return null;
+
+            // 8. 残り：未知サービス名の可能性があるテキスト
             if (sc.length < 2) return null;
-            if (/^[!-/:-@[-`{-~]+$/.test(sc)) return null; // 全部記号
-            if (/^[a-z]{3,}$/.test(key) && !/(recruit|doda|jac|biz|link|indeed|hays|ambi|findy)/i.test(key)) {
-                // 辞書未登録の3文字以上英字で主要KWなし → null
-                if (sc.length <= 5) return null;
-            }
+            if (_RE_ALL_SYMBOL.test(sc)) return null;
+            if (_RE_ALPHA_ONLY.test(normalizedKey) && !_RE_SVC_KW.test(normalizedKey) && sc.length <= 5) return null;
+
+            // 9. 二次フィルタ: 辞書未登録テキストの追加ゴミ判定
+            if (_RE_NOANSWER2.test(sc)) return null;
+            if (_RE_COMMENT.test(sc)) return null;
+            if (sc.length > 6 && _RE_LONG_KANA.test(sc)) return null;
 
             return s;
         }
@@ -1483,19 +1545,24 @@
 
         function processSurveyRow(row, stats, context, weight = 1) {
             const { q1Indexes, q2Indexes, q3OtherIndex, q4OtherIndex, awarenessQ3Indexes, awarenessQ4Indexes, serviceQuestionIndexes } = context;
+            // q1Slots/q2Slots: 元のスロット位置(0-4)を保持した配列（nullスロットも位置を記録）
+            const q1Slots = [];  // [{service, slot}]
+            const q2Slots = [];
             const q1Ordered = [];
             const q2Ordered = [];
 
-            for (const idx of q1Indexes) {
-                const v = normalizeText(row[idx]);
+            for (let si = 0; si < q1Indexes.length; si++) {
+                const v = normalizeText(row[q1Indexes[si]]);
                 if (!v) continue;
+                q1Slots.push({ service: v, slot: si });
                 q1Ordered.push(v);
                 incrementMap(stats.q1.total, v, weight);
             }
 
-            for (const idx of q2Indexes) {
-                const v = normalizeText(row[idx]);
+            for (let si = 0; si < q2Indexes.length; si++) {
+                const v = normalizeText(row[q2Indexes[si]]);
                 if (!v) continue;
+                q2Slots.push({ service: v, slot: si });
                 q2Ordered.push(v);
                 incrementMap(stats.q2.total, v, weight);
             }
@@ -1509,28 +1576,29 @@
             const q2Unique = orderedUnique(q2Ordered.filter(v => v !== CAT_OTHER));
             if (q1Unique.length || q2Unique.length) stats.meaningfulRespondentCount += weight;
 
+            // ランク集計: 元のスロット位置(S1=0, S2=1, ...)に基づくスコア付け
             const q1RankMap = new Map();
-            q1Ordered.forEach((service, idx) => {
-                if (service === CAT_OTHER || q1RankMap.has(service)) return;
-                q1RankMap.set(service, idx);
-            });
-            q1RankMap.forEach((idx, service) => {
+            for (const { service, slot } of q1Slots) {
+                if (service === CAT_OTHER || q1RankMap.has(service)) continue;
+                q1RankMap.set(service, slot);
+            }
+            q1RankMap.forEach((slot, service) => {
                 const entry = ensureFocusEntry(stats.focus.services, service);
                 entry.q1Total += weight;
-                entry.q1Ranks[idx] += weight;
-                entry.score += (5 - idx) * weight;
+                if (slot < 5) entry.q1Ranks[slot] += weight;
+                entry.score += Math.max(5 - slot, 1) * weight;
             });
 
             const q2RankMap = new Map();
-            q2Ordered.forEach((service, idx) => {
-                if (service === CAT_OTHER || q2RankMap.has(service)) return;
-                q2RankMap.set(service, idx);
-            });
-            q2RankMap.forEach((idx, service) => {
+            for (const { service, slot } of q2Slots) {
+                if (service === CAT_OTHER || q2RankMap.has(service)) continue;
+                q2RankMap.set(service, slot);
+            }
+            q2RankMap.forEach((slot, service) => {
                 const entry = ensureFocusEntry(stats.focus.services, service);
                 entry.q2Total += weight;
-                entry.q2Ranks[idx] += weight;
-                entry.score += (5 - idx) * weight;
+                if (slot < 5) entry.q2Ranks[slot] += weight;
+                entry.score += Math.max(5 - slot, 1) * weight;
             });
 
             if (q1s1 && q1s1 !== CAT_OTHER) ensureFocusEntry(stats.focus.services, q1s1).q1First += weight;
@@ -1555,10 +1623,10 @@
             const awareQ3 = new Set();
             const awareQ4 = new Set();
             for (const item of awarenessQ3Indexes) {
-                if (truthyAnswer(row[item.idx])) awareQ3.add(item.service);
+                if (truthyAnswer(row[item.idx])) awareQ3.add(canonicalName(item.service));
             }
             for (const item of awarenessQ4Indexes) {
-                if (truthyAnswer(row[item.idx])) awareQ4.add(item.service);
+                if (truthyAnswer(row[item.idx])) awareQ4.add(canonicalName(item.service));
             }
             const q3Other = normalizeText(q3OtherIndex === undefined ? '' : row[q3OtherIndex]);
             const q4Other = normalizeText(q4OtherIndex === undefined ? '' : row[q4OtherIndex]);
@@ -1572,7 +1640,7 @@
             });
 
             for (const item of serviceQuestionIndexes) {
-                const entry = ensureFocusEntry(stats.focus.services, item.service);
+                const entry = ensureFocusEntry(stats.focus.services, canonicalName(item.service));
                 const survey = entry.survey;
 
                 const recognition = numericAnswer(item.recognitionIdx === undefined ? '' : row[item.recognitionIdx]);
@@ -2994,22 +3062,30 @@
             };
         }
 
-        function resolveGroupLabel(row, groupBy, headers) {
+        // resolveGroupLabel 用の事前計算インデックス（行ループ内での indexOf を排除）
+        let _groupLabelCtx = null;
+        function _prepareGroupLabelCtx(headers, groupBy) {
             if (groupBy === 'cellname') {
-                const idx = headers.indexOf('CELLNAME');
-                return idx >= 0 ? (String(row[idx] || '').trim() || '(空白)') : '(空白)';
+                return { type: 'cellname', idx: headers.indexOf('CELLNAME') };
             }
             const def = DEMO_DEFS.find(d => d.key === groupBy);
-            if (!def) return '(不明)';
+            if (!def) return { type: 'unknown' };
             const colIdx = headers.indexOf(def.header);
-            if (colIdx < 0) return '(不明)';
-            const rawVal = parseFloat(row[colIdx]);
+            return { type: 'demo', def, colIdx };
+        }
+        function resolveGroupLabel(row, ctx) {
+            if (ctx.type === 'cellname') {
+                return ctx.idx >= 0 ? (String(row[ctx.idx] || '').trim() || '(空白)') : '(空白)';
+            }
+            if (ctx.type === 'unknown') return '(不明)';
+            if (ctx.colIdx < 0) return '(不明)';
+            const rawVal = parseFloat(row[ctx.colIdx]);
             if (isNaN(rawVal)) return '(未回答)';
-            if (def.groups) {
-                for (const g of def.groups) { if (g.test(rawVal)) return g.label; }
+            if (ctx.def.groups) {
+                for (const g of ctx.def.groups) { if (g.test(rawVal)) return g.label; }
                 return '(その他)';
             }
-            return def.labels?.[rawVal] || `(${rawVal})`;
+            return ctx.def.labels?.[rawVal] || `(${rawVal})`;
         }
 
         // Helper to build flag/score index arrays
@@ -3086,13 +3162,14 @@
             const allQ1Svcs = new Set(), allQ2Svcs = new Set();
             const totalRows = rows.length - 1;
             const batchSize = totalRows > 20000 ? 2000 : 800;
+            const groupCtx = _prepareGroupLabelCtx(headers, opts.groupBy);
 
             for (let start = 0; start < totalRows; start += batchSize) {
                 const end = Math.min(start + batchSize, totalRows);
                 for (let r = start; r < end; r++) {
                     const row = rows[r + 1];
                     if (!row) continue;
-                    const grp = resolveGroupLabel(row, opts.groupBy, headers);
+                    const grp = resolveGroupLabel(row, groupCtx);
                     const total = getCell('全体');
                     const cell = getCell(grp);
                     total.count++; cell.count++;
@@ -3200,16 +3277,16 @@
             if (qKey === 'Q2') return { keys: _crossTabData.q2Svcs, labels: _crossTabData.q2Svcs, isScore: false };
             if (qKey === 'Q3' || qKey === 'Q4') {
                 const keys = Array.from({ length: 30 }, (_, i) => i + 1);
-                return { keys, labels: keys.map(n => AWARENESS_OPTION_INDEX[n] || (qKey + '_' + n)), isScore: false };
+                return { keys, labels: keys.map(n => canonicalName(AWARENESS_OPTION_INDEX[n] || (qKey + '_' + n))), isScore: false };
             }
             if (qKey === 'Q5' || qKey === 'Q7' || qKey === 'Q8') {
                 const keys = Array.from({ length: 17 }, (_, i) => i + 1);
-                return { keys, labels: keys.map(n => PANEL_SERVICE_INDEX[n] || ('S' + n)), isScore: true };
+                return { keys, labels: keys.map(n => canonicalName(PANEL_SERVICE_INDEX[n] || ('S' + n))), isScore: true };
             }
             if (qKey === 'Q10') {
                 // S1=利用したサービス(MA), S2=最も利用(SA) — show S1 only (flag)
                 const keys = Array.from({ length: 30 }, (_, i) => '1_' + (i + 1));
-                return { keys, labels: keys.map(k => AWARENESS_OPTION_INDEX[parseInt(k.split('_')[1])] || k), isScore: false };
+                return { keys, labels: keys.map(k => canonicalName(AWARENESS_OPTION_INDEX[parseInt(k.split('_')[1])] || k)), isScore: false };
             }
             if (qKey === 'Q11') {
                 // S1=あてはまるもの(MA), S2=最もあてはまる(SA) — show S1 only (flag)
@@ -3223,7 +3300,7 @@
             }
             if (qKey === 'Q12' || qKey === 'Q13' || qKey === 'Q14') {
                 const keys = Array.from({ length: 9 }, (_, i) => i + 1);
-                return { keys, labels: keys.map(n => CORP_INDEX[n] || ('S' + n)), isScore: true };
+                return { keys, labels: keys.map(n => canonicalName(CORP_INDEX[n] || ('S' + n))), isScore: true };
             }
             if (qKey === 'Q15') {
                 // 9 corps × 29 options — show S1 (JAC) only for now, or flatten
@@ -3307,7 +3384,8 @@
             tbody.innerHTML = frags.join('');
         }
 
-        function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        const _escDiv = document.createElement('div');
+        function escHtml(s) { _escDiv.textContent = s; return _escDiv.innerHTML; }
 
         function downloadCrossTabExcel() {
             if (!_crossTabData) return;
@@ -3424,6 +3502,7 @@
         const FA_COLUMNS = [
             'Q1S1FA', 'Q1S2FA', 'Q1S3FA', 'Q1S4FA', 'Q1S5FA',
             'Q2S1FA', 'Q2S2FA', 'Q2S3FA', 'Q2S4FA', 'Q2S5FA',
+            'Q3_29FA', 'Q4_29FA',
         ];
 
         async function buildEnrichedData(rows, onProgress) {
