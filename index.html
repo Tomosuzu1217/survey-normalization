@@ -832,10 +832,14 @@
                         <select id="ctGroupBy" onchange="onCrosstabOptionChange()" class="rounded-lg border border-gray-200 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
                             <option value="cellname">CELLNAME（そのまま）</option>
                             <option value="sex">性別</option>
-                            <option value="ageid" selected>年齢</option>
+                            <option value="ageid" selected>年齢（5才刻み）</option>
+                            <option value="ageid10">年代（10年刻み）</option>
+                            <option value="sexage">性年代</option>
                             <option value="sq3">年収</option>
                             <option value="sq4">役職</option>
                             <option value="sq5">転職意向</option>
+                            <option value="ncell2">割付（簡易）</option>
+                            <option value="ncell">割付（詳細）</option>
                         </select>
                     </div>
                     <div>
@@ -871,12 +875,16 @@
                 <!-- Q sub-tabs -->
                 <div id="crosstabSubTabs" class="flex gap-1.5 flex-wrap">
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SEX" onclick="selectCrosstabQ('SEX',this)">性別</button>
-                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="AGEID" onclick="selectCrosstabQ('AGEID',this)">年齢</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="AGEID" onclick="selectCrosstabQ('AGEID',this)">年齢(5才刻み)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="AGEID_10" onclick="selectCrosstabQ('AGEID_10',this)">年代(10年刻み)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SEXAGE" onclick="selectCrosstabQ('SEXAGE',this)">性年代</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="MARRIED" onclick="selectCrosstabQ('MARRIED',this)">未既婚</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="CHILD" onclick="selectCrosstabQ('CHILD',this)">子供</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ3" onclick="selectCrosstabQ('SQ3',this)">年収</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ4" onclick="selectCrosstabQ('SQ4',this)">役職</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="SQ5" onclick="selectCrosstabQ('SQ5',this)">転職意向</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="NCELL2" onclick="selectCrosstabQ('NCELL2',this)">割付(簡易)</button>
+                    <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="NCELL" onclick="selectCrosstabQ('NCELL',this)">割付(詳細)</button>
                     <span class="w-px h-5 bg-gray-300 mx-0.5"></span>
                     <button class="tab-btn active text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q1" onclick="selectCrosstabQ('Q1',this)">Q1 想起(HC)</button>
                     <button class="tab-btn text-xs !py-1.5 !px-4 !rounded-lg" data-q="Q2" onclick="selectCrosstabQ('Q2',this)">Q2 想起(EX)</button>
@@ -1880,13 +1888,32 @@
             },
             {
                 key: 'sq4', header: 'SQ4', label: '役職',
-                labels: { 1: '役員クラス以上', 2: '本部長・事業部長クラス', 3: '部長クラス',
-                          4: '課長クラス', 5: '係長・主任クラス', 6: '一般社員', 7: '契約・派遣', 8: 'その他' }
+                labels: { 1: '役員クラス以上', 2: '本部長・事業部長・局長クラス', 3: '部長クラス',
+                          4: '課長クラス', 5: '係長・主任クラス', 6: '一般社員', 7: '契約社員・派遣社員', 8: 'その他' }
             },
             {
                 key: 'sq5', header: 'SQ5', label: '転職意向',
                 labels: { 1: '3ヶ月以内', 2: '半年以内', 3: '1年以内',
                           4: '2-3年以内', 5: '時期未定だが転職したい', 6: '転職なし(経験あり)', 7: '転職なし(経験なし)' }
+            },
+            {
+                key: 'ageid10', header: 'AGEID_10', label: '年代(10年刻み)',
+                labels: { 1: '20代', 2: '30代', 3: '40代', 4: '50代', 5: '60代' }
+            },
+            {
+                key: 'sexage', header: 'SEXAGE', label: '性年代',
+                labels: { 1: '男性25-39', 2: '男性40-54', 3: '男性55-64', 4: '女性25-39', 5: '女性40-54', 6: '女性55-64' }
+            },
+            {
+                key: 'ncell2', header: 'NCELL2', label: '割付(簡易)',
+                labels: { 1: '一般有職者', 2: 'エリア合算', 3: 'エグゼクティブ', 4: 'キャリア' }
+            },
+            {
+                key: 'ncell', header: 'NCELL', label: '割付(詳細)',
+                labels: { 1:'一般有職者', 2:'【関東】600-799万', 3:'【関東】800-999万', 4:'【関東】1000-1499万', 5:'【関東】1500万以上',
+                          6:'【関西】600-799万', 7:'【関西】800-999万', 8:'【関西】1000-1499万', 9:'【関西】1500万以上',
+                          10:'【東海/他】600-799万', 11:'【東海/他】800-999万', 12:'【東海/他】1000-1499万', 13:'【東海/他】1500万以上',
+                          14:'エグゼクティブ', 15:'キャリア' }
             }
         ];
         const DEMO_COLORS = ['#6366f1cc', '#8b5cf6cc', '#ec4899cc', '#f97316cc', '#10b981cc'];
@@ -3103,15 +3130,19 @@
             return arr;
         }
 
-        const ALL_Q_KEYS = ['SEX','AGEID','MARRIED','CHILD','SQ3','SQ4','SQ5','Q1','Q2','Q3','Q4','Q5','Q7','Q8','Q10','Q11','Q12','Q13','Q14','Q15','Q16','Q17'];
+        const ALL_Q_KEYS = ['SEX','AGEID','AGEID_10','SEXAGE','MARRIED','CHILD','SQ3','SQ4','SQ5','NCELL2','NCELL','Q1','Q2','Q3','Q4','Q5','Q7','Q8','Q10','Q11','Q12','Q13','Q14','Q15','Q16','Q17'];
         const DEMO_COL_DEFS = {
             SEX:     { header: 'SEX',     labels: { 1:'男性', 2:'女性' } },
             AGEID:   { header: 'AGEID',   labels: { 1:'12才未満',2:'12-19才',3:'20-24才',4:'25-29才',5:'30-34才',6:'35-39才',7:'40-44才',8:'45-49才',9:'50-54才',10:'55-59才',11:'60才以上' } },
+            AGEID_10:{ header: 'AGEID_10',labels: { 1:'20代',2:'30代',3:'40代',4:'50代',5:'60代' } },
+            SEXAGE:  { header: 'SEXAGE',  labels: { 1:'男性25-39',2:'男性40-54',3:'男性55-64',4:'女性25-39',5:'女性40-54',6:'女性55-64' } },
             MARRIED: { header: 'MARRIED', labels: { 1:'未婚', 2:'既婚' } },
             CHILD:   { header: 'CHILD',   labels: { 1:'子供なし', 2:'子供あり' } },
-            SQ3:     { header: 'SQ3',     labels: Object.fromEntries(Array.from({length:19},(_, i)=>[(i+1), ['200万未満','200-300万','300-400万','400-500万','500-600万','600-700万','700-800万','800-900万','900-1000万','1000-1100万','1100-1200万','1200-1300万','1300-1500万','1500-2000万','2000-2500万','2500-3000万','3000万以上','わからない','答えたくない'][i] || (''+(i+1))])) },
-            SQ4:     { header: 'SQ4',     labels: { 1:'役員クラス以上',2:'本部長・事業部長',3:'部長',4:'課長',5:'係長・主任',6:'一般社員',7:'契約・派遣',8:'その他' } },
+            SQ3:     { header: 'SQ3',     labels: { 1:'300万円未満',2:'300-400万',3:'400-500万',4:'500-600万',5:'600-700万',6:'700-800万',7:'800-900万',8:'900-1000万',9:'1000-1100万',10:'1100-1200万',11:'1200-1300万',12:'1300-1400万',13:'1400-1500万',14:'1500-2000万',15:'2000-2500万',16:'2500-3000万',17:'3000万以上',18:'わかりません',19:'答えたくない' } },
+            SQ4:     { header: 'SQ4',     labels: { 1:'役員クラス以上',2:'本部長・事業部長・局長クラス',3:'部長クラス',4:'課長クラス',5:'係長・主任クラス',6:'一般社員',7:'契約社員・派遣社員',8:'その他' } },
             SQ5:     { header: 'SQ5',     labels: { 1:'3ヶ月以内',2:'半年以内',3:'1年以内',4:'2-3年以内',5:'時期未定',6:'転職なし(経験あり)',7:'転職なし(経験なし)' } },
+            NCELL2:  { header: 'NCELL2',  labels: { 1:'一般有職者',2:'エリア合算',3:'エグゼクティブ',4:'キャリア' } },
+            NCELL:   { header: 'NCELL',   labels: { 1:'一般有職者',2:'【関東】600-799万',3:'【関東】800-999万',4:'【関東】1000-1499万',5:'【関東】1500万以上',6:'【関西】600-799万',7:'【関西】800-999万',8:'【関西】1000-1499万',9:'【関西】1500万以上',10:'【東海/他】600-799万',11:'【東海/他】800-999万',12:'【東海/他】1000-1499万',13:'【東海/他】1500万以上',14:'エグゼクティブ',15:'キャリア' } },
         };
 
         async function buildCrossTabData(rows, onProgress) {
