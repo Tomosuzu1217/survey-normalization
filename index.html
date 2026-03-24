@@ -3423,8 +3423,13 @@
         const _UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
         function isSafeKey(k) { return !_UNSAFE_KEYS.has(String(k)); }
 
-        function downloadCrossTabExcel() {
+        function _showDownloadSpinner() { document.getElementById('downloadSpinner').classList.remove('hidden'); }
+        function _hideDownloadSpinner() { document.getElementById('downloadSpinner').classList.add('hidden'); }
+
+        async function downloadCrossTabExcel() {
             if (!_crossTabData) return;
+            _showDownloadSpinner();
+            await new Promise(r => setTimeout(r, 60));
             const { cells } = _crossTabData;
             const groupNames = getFilteredGroupNames();
             const opts = getCrosstabOptions();
@@ -3513,7 +3518,7 @@
             const now = new Date();
             const dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
             const baseName = _enrichedFileName.replace(/\.[^.]+$/, '');
-            XLSX.writeFile(wb, `クロス集計_${baseName}_${dateStr}.xlsx`);
+            try { XLSX.writeFile(wb, `クロス集計_${baseName}_${dateStr}.xlsx`); } finally { _hideDownloadSpinner(); }
         }
 
         function switchToCrosstab() {
@@ -3623,18 +3628,22 @@
             _enrichedRows = newRows;
         }
 
-        function downloadEnrichedData() {
+        async function downloadEnrichedData() {
             if (!_enrichedHeaders || !_enrichedRows) return;
-            const aoa = [_enrichedHeaders, ..._enrichedRows];
-            const ws = XLSX.utils.aoa_to_sheet(aoa);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-            const now = new Date();
-            const dateStr = now.getFullYear() +
-                String(now.getMonth() + 1).padStart(2, '0') +
-                String(now.getDate()).padStart(2, '0');
-            const baseName = _enrichedFileName.replace(/\.[^.]+$/, '');
-            XLSX.writeFile(wb, `正規化結果_${baseName}_${dateStr}.xlsx`);
+            _showDownloadSpinner();
+            await new Promise(r => setTimeout(r, 60));
+            try {
+                const aoa = [_enrichedHeaders, ..._enrichedRows];
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+                const now = new Date();
+                const dateStr = now.getFullYear() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+                const baseName = _enrichedFileName.replace(/\.[^.]+$/, '');
+                XLSX.writeFile(wb, `正規化結果_${baseName}_${dateStr}.xlsx`);
+            } finally { _hideDownloadSpinner(); }
         }
 
         function wireAnalyzeButton() {
@@ -3813,6 +3822,18 @@
             updateSelectors(null);
         }
     </script>
+
+    <!-- Download spinner overlay -->
+    <div id="downloadSpinner" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl px-10 py-8 flex flex-col items-center gap-4">
+            <svg class="animate-spin w-10 h-10 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+            <p class="text-sm font-semibold text-gray-700">Excel を生成中...</p>
+            <p class="text-xs text-gray-400">しばらくお待ちください</p>
+        </div>
+    </div>
 </body>
 
 </html>
