@@ -1059,12 +1059,14 @@
 
             {
                 name: 'エン転職', variants: [
-                    'エン転職', 'en転職', 'エン', 'エンジャパン', 'エン職', 'えんてんしょく', 'エンてんしよく',
+                    'エン転職', 'en転職', 'えん転職', 'エン', 'エンジャパン', 'えんじゃぱん', 'エン職', 'えん職',
+                    'えんてんしょく', 'エンてんしよく', 'エンてんしょく', 'えんてんしよく',
                     'エンシニア', 'エンゲージ', 'エンゲージメント', 'エンミドルの転職', 'enジャパン',
                     'enミドルの転職', 'enてんしょく', 'えんてんしょく', 'エンていしょく', 'en職',
                     'enjapan', 'enjp', 'en転職', 'あんびとん', 'エンミドル', 'en',
                 ], fuzzy: [
                     /^エン(転職|ジャパン|ミドル|ゲージ)?$/,
+                    /^えん(転職|ジャパン|ミドル)?$/,
                     /^en(japan|転職|ミドル)?$/i,
                 ]
             },
@@ -1190,6 +1192,7 @@
         }
 
         const CAT_OTHER = 'その他';
+        const CAT_NOANSWER = '無回答';
         const OTHER_VARIANTS = [
             'その他', 'そのほか', '特になし', '特にない', '特にありません', 'ありません', 'なし', '無し',
             'わからない', 'わかりません', '不明', '覚えていない', '思い出せない', '未回答', '未利用',
@@ -1281,6 +1284,9 @@
         const RECOGNITION_LABELS = { 1: '内容まで知っている', 2: '名前は知っている', 3: '知らない' };
         const INTEREST_LABELS = { 1: 'とても興味がある', 2: '興味がある', 3: 'どちらともいえない', 4: '興味がない', 5: 'まったく興味がない' };
         const USAGE_LABELS = { 1: 'とても利用したい', 2: '利用したい', 3: 'どちらともいえない', 4: '利用したくない', 5: 'まったく利用したくない' };
+        // FA列では「転機」はサービス名ではなく無効回答扱い
+        const FA_PANEL_EXCLUDE = new Set(['転機']);
+
         const PANEL_LABEL_LOOKUP = new Map([
             ...Object.values(PANEL_SERVICE_INDEX),
             ...Object.values(AWARENESS_OPTION_INDEX).filter(v => !NO_SELECTION_KEYS.has(v)),
@@ -1433,6 +1439,8 @@
         const _RE_NOANSWER2 = /(?:分から|わから|解ら|判ら|浮かば|覚えて|思い(?:出せ|浮かば|つか|付か)|知ら)(?:ない|ません|ないです)/;
         const _RE_COMMENT   = /(?:コマーシャル|ありがとう|よろしく|おかしい|専門性|給料|ずっと同じ|企業を|ございません|担当[\?？]|&#\d+;)/;
         const _RE_LONG_KANA = /^[ぁ-んァ-ンー、。？！\?!"'^;\/\-「」\s]+$/;
+        // 表示用: normalizeTextForDisplay で「無回答」に分類するパターン
+        const _RE_NOANSWER_DISPLAY = /(?:なし|^ない$|^無い$|^無し$|^なき$|^なさ$|わから|分から|解ら|判ら|浮かば|覚えて|思い(?:出せ|浮か|つか|付か)|知らない|しらない|不明|ふめい|ありません|ありがとう|よろしく|^ナッシング$|^none$|特に.{0,4}ない|特に.{0,4}なし|とくに.{0,4}ない|とくに.{0,4}なし|いろいろ)/i;
 
         function normalizeText(raw) {
             if (raw === null || raw === undefined || raw === '') return null;
@@ -1449,6 +1457,18 @@
             if (_normCache.size >= _NORM_CACHE_LIMIT) _normCache.clear();
             _normCache.set(s, result);
             return result;
+        }
+
+        /** Correct列表示用: null → 無回答 or その他（空白にしない） */
+        function normalizeTextForDisplay(raw) {
+            if (raw === null || raw === undefined) return CAT_NOANSWER;
+            const s = String(raw).trim();
+            if (!s) return CAT_NOANSWER;
+            const result = normalizeText(raw);
+            if (result !== null) return result;
+            const sc = s.replace(/[\s　]/g, '');
+            if (_RE_NOANSWER2.test(sc) || _RE_NOANSWER_DISPLAY.test(sc)) return CAT_NOANSWER;
+            return CAT_OTHER;
         }
 
         function _normalizeTextCore(s) {
@@ -1468,7 +1488,11 @@
             }
 
             // 4. パネルサービス名完全一致（辞書にないサービスのみここに到達）
-            if (PANEL_LABEL_LOOKUP.has(normalizedKey)) return canonicalName(PANEL_LABEL_LOOKUP.get(normalizedKey));
+            if (PANEL_LABEL_LOOKUP.has(normalizedKey)) {
+                const svcName = canonicalName(PANEL_LABEL_LOOKUP.get(normalizedKey));
+                if (FA_PANEL_EXCLUDE.has(svcName)) return CAT_OTHER;
+                return svcName;
+            }
 
             // --- ここから先は辞書に該当しなかったテキストのフィルタリング ---
             const sc = s.replace(/[\s　]/g, '');
@@ -1498,7 +1522,7 @@
             if (_RE_COMMENT.test(sc)) return null;
             if (sc.length > 6 && _RE_LONG_KANA.test(sc)) return null;
 
-            return s;
+            return CAT_OTHER;
         }
 
         // =====================================================================
@@ -3604,14 +3628,9 @@
                         for (let c = segStarts[s]; c < segEnds[s]; c++) {
                             out[outIdx++] = c < srcLen ? srcRow[c] : '';
                         }
-                        // Compute normalized value
-                        const raw = faOrigIdx[s] < srcLen ? srcRow[faOrigIdx[s]] : '';
-                        if (raw !== null && raw !== undefined && String(raw).trim() !== '') {
-                            const result = normalizeText(raw);
-                            out[outIdx++] = result !== null ? result : '';
-                        } else {
-                            out[outIdx++] = '';
-                        }
+                        // Compute normalized value (空白なし: 無回答/その他で必ず埋める)
+                        const rawVal = faOrigIdx[s] < srcLen ? srcRow[faOrigIdx[s]] : '';
+                        out[outIdx++] = normalizeTextForDisplay(rawVal);
                     }
                     // Trailing segment
                     for (let c = segStarts[faIndexes.length]; c < segEnds[faIndexes.length]; c++) {
