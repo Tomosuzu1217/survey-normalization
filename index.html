@@ -2548,7 +2548,7 @@
 
             document.querySelector('#focusCoTable tbody').innerHTML = (coRows.length ? coRows : [['該当なし', 0]]).map(([service, count]) => `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="py-2 pr-4 max-w-[220px] truncate" title="${service}">${service}</td>
+                    <td class="py-2 pr-4 max-w-[220px] truncate" title="${escHtml(service)}">${escHtml(service)}</td>
                     <td class="py-2 px-3 text-right font-semibold text-slate-800">${count}</td>
                     <td class="py-2 px-3 text-right text-slate-500">${entry.coQ1?.[service] || 0}</td>
                     <td class="py-2 px-3 text-right text-slate-500">${entry.coQ2?.[service] || 0}</td>
@@ -2573,7 +2573,7 @@
             const monthRows = buildTargetMonthRows([mainMonth, ...cmpMonths]);
             document.querySelector('#focusCompareTable tbody').innerHTML = monthRows.map(row => `
                 <tr class="${row.month === mainMonth ? 'bg-indigo-50/60' : 'hover:bg-slate-50 transition'}">
-                    <td class="py-2 pr-4 font-medium text-gray-800">${row.month}</td>
+                    <td class="py-2 pr-4 font-medium text-gray-800">${escHtml(row.month)}</td>
                     <td class="py-2 px-3 text-right">${row.q1}<span class="ml-1 text-[11px] text-gray-400">${row.q1ReachShare}</span></td>
                     <td class="py-2 px-3 text-right">${row.q2}<span class="ml-1 text-[11px] text-gray-400">${row.q2ReachShare}</span></td>
                     <td class="py-2 px-3 text-right">${row.q1First}<span class="ml-1 text-[11px] text-gray-400">${row.q1FirstRate}</span></td>
@@ -2608,7 +2608,7 @@
             sortedKeys.forEach(key => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-indigo-50 transition';
-                let row = `<td class="py-1.5 pr-5 font-medium text-gray-800 max-w-[220px] truncate" title="${key}">${key}</td>`;
+                let row = `<td class="py-1.5 pr-5 font-medium text-gray-800 max-w-[220px] truncate" title="${escHtml(key)}">${escHtml(key)}</td>`;
                 sortedMonths.forEach((month, index) => {
                     const s1 = monthDataMap[month]?.[qKey]?.s1?.[key] || 0;
                     const total = monthDataMap[month]?.[qKey]?.total?.[key] || 0;
@@ -2700,11 +2700,11 @@
                 { label: '有効回答者数 (N)', value: totalN, sub: 'フィルタ適用後' },
                 { label: '第一想起トップ', value: topFirst, sub: `${topFirstCount}件 (${formatPct(topFirstCount, totalN)})` },
                 { label: '全体想起トップ', value: topTotal, sub: `${topTotalCount}件 (${formatPct(topTotalCount, totalN)})` },
-                { label: '第一想起率', value: formatPct(topFirstCount, totalN), sub: `${topFirst}` },
+                { label: '第一想起率', value: formatPct(topFirstCount, totalN), sub: `${escHtml(topFirst)}` },
             ].map(card => `
                 <div class="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
                     <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">${card.label}</div>
-                    <div class="text-sm font-bold ${colorClass} mt-2 truncate" title="${card.value}">${card.value}</div>
+                    <div class="text-sm font-bold ${colorClass} mt-2 truncate" title="${escHtml(String(card.value))}">${escHtml(String(card.value))}</div>
                     <div class="text-xs text-gray-500 mt-1">${card.sub}</div>
                 </div>`).join('');
         }
@@ -2886,7 +2886,7 @@
 
             tbody.innerHTML = rows.map(row => `
                 <tr class="${row.month === tabState[currentTab].mainMonth ? 'bg-indigo-50/60' : 'hover:bg-slate-50 transition'}">
-                    <td class="py-2 pr-4 font-medium text-gray-800">${row.month}</td>
+                    <td class="py-2 pr-4 font-medium text-gray-800">${escHtml(row.month)}</td>
                     <td class="py-2 px-3 text-right">${row.q1}</td>
                     <td class="py-2 px-3 text-right">${row.q2}</td>
                     <td class="py-2 px-3 text-right">${row.q3Aware}</td>
