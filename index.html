@@ -2601,8 +2601,8 @@
                 });
             });
 
-            const allKeys = new Set(sortedMonths.flatMap(month => Object.keys(monthDataMap[month]?.[qKey]?.total || {})));
-            const latestTotal = monthDataMap[sortedMonths.at(-1)]?.[qKey]?.total || {};
+            const allKeys = new Set(sortedMonths.flatMap(month => Object.keys(monthDataMap.get(month)?.[qKey]?.total || {})));
+            const latestTotal = monthDataMap.get(sortedMonths.at(-1))?.[qKey]?.total || {};
             const sortedKeys = [...allKeys].filter(k => k !== CAT_OTHER).sort((a, b) => (latestTotal[b] || 0) - (latestTotal[a] || 0));
 
             sortedKeys.forEach(key => {
@@ -2610,11 +2610,11 @@
                 tr.className = 'hover:bg-indigo-50 transition';
                 let row = `<td class="py-1.5 pr-5 font-medium text-gray-800 max-w-[220px] truncate" title="${escHtml(key)}">${escHtml(key)}</td>`;
                 sortedMonths.forEach((month, index) => {
-                    const s1 = monthDataMap[month]?.[qKey]?.s1?.[key] || 0;
-                    const total = monthDataMap[month]?.[qKey]?.total?.[key] || 0;
+                    const s1 = monthDataMap.get(month)?.[qKey]?.s1?.[key] || 0;
+                    const total = monthDataMap.get(month)?.[qKey]?.total?.[key] || 0;
                     let diffHtml = '';
                     if (index > 0) {
-                        const prevTotal = monthDataMap[sortedMonths[index - 1]]?.[qKey]?.total?.[key] || 0;
+                        const prevTotal = monthDataMap.get(sortedMonths[index - 1])?.[qKey]?.total?.[key] || 0;
                         const diff = total - prevTotal;
                         if (diff !== 0) diffHtml = `<span class="${diff > 0 ? 'text-emerald-600' : 'text-red-500'} text-xs font-bold ml-1">${diff > 0 ? '+' : ''}${diff}</span>`;
                     }
@@ -2720,25 +2720,27 @@
             state.cmpMonths = [...cmpMonths];
 
             function toPct(dict, base) {
-                const r = {};
-                for (const [k, v] of Object.entries(dict || {})) r[k] = base ? (v / base * 100) : 0;
+                const r = Object.create(null);
+                for (const [k, v] of Object.entries(dict || {})) {
+                    if (isSafeKey(k)) r[k] = base ? (v / base * 100) : 0;
+                }
                 return r;
             }
 
             if (hasCompare) {
                 const allMonthsInView = [mainMonth, ...cmpMonths].sort();
-                const monthDataMap = {};
-                allMonthsInView.forEach(month => { monthDataMap[month] = load(tab, month); });
+                const monthDataMap = new Map();
+                allMonthsInView.forEach(month => { monthDataMap.set(month, load(tab, month)); });
 
                 function buildCompLine(qKey, sKey) {
                     const allData = allMonthsInView.map(month => {
-                        const d = monthDataMap[month];
+                        const d = monthDataMap.get(month);
                         const base = d?.filteredCount || d?.respondentCount || 0;
                         return { month, dict: toPct(d?.[qKey]?.[sKey], base) };
                     });
-                    const merged = {};
+                    const merged = Object.create(null);
                     allData.forEach(({ dict }) => Object.entries(dict).forEach(([key, value]) => {
-                        merged[key] = (merged[key] || 0) + value;
+                        if (isSafeKey(key)) merged[key] = (merged[key] || 0) + value;
                     }));
                     return { allData, topKeys: topN(merged, 8), xLabels: allMonthsInView };
                 }
@@ -3417,6 +3419,9 @@
 
         const _escDiv = document.createElement('div');
         function escHtml(s) { _escDiv.textContent = s; return _escDiv.innerHTML; }
+        // Prototype pollution guard: reject keys that can hijack the object prototype chain
+        const _UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+        function isSafeKey(k) { return !_UNSAFE_KEYS.has(String(k)); }
 
         function downloadCrossTabExcel() {
             if (!_crossTabData) return;
