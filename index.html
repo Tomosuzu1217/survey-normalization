@@ -1064,14 +1064,16 @@
                     'エンシニア', 'エンゲージ', 'エンゲージメント', 'エンミドルの転職', 'enジャパン',
                     'enミドルの転職', 'enてんしょく', 'えんてんしょく', 'エンていしょく', 'en職',
                     'enjapan', 'enjp', 'en転職', 'あんびとん', 'エンミドル', 'en',
-                    'エン転', 'えん転', 'エン・ジャパン', 'えん・じゃぱん',
-                    'エンエージェント', 'えんえーじぇんと', 'えんえーじぇんと',
-                    '円転職', 'エン転職コンサルタント',
+                    'エン転', 'えん転',
+                    'エンエージェント', 'えんえーじぇんと',
+                    'エン転職コンサルタント',
                 ], fuzzy: [
-                    /^エン(転職?|ジャパン|ミドル|ゲージ)?$/,
+                    /^エン[・.]?ジャパン$/,
+                    /^えん[・.]?じゃぱん$/,
+                    /^エン(転職?|ミドル|ゲージ)?$/,
                     /^えん(転職?|ジャパン|ミドル)?$/,
                     /^en(japan|転職|ミドル)?$/i,
-                    /^エン転職/,
+                    /^エン転職$/,
                 ]
             },
 
@@ -1444,7 +1446,7 @@
         const _RE_COMMENT   = /(?:コマーシャル|ありがとう|よろしく|おかしい|専門性|給料|ずっと同じ|企業を|ございません|担当[\?？]|&#\d+;)/;
         const _RE_LONG_KANA = /^[ぁ-んァ-ンー、。？！\?!"'^;\/\-「」\s]+$/;
         // 表示用: normalizeTextForDisplay で「無回答」に分類するパターン
-        const _RE_NOANSWER_DISPLAY = /(?:なし|^ない$|^無い$|^無し$|^なき$|^なさ$|わから|分から|解ら|判ら|浮かば|覚えて|思い(?:出せ|浮か|つか|付か)|知らない|しらない|しらなし|不明|ふめい|ありません|ありがとう|よろしく|^ナッシング$|^none$|特に.{0,4}ない|特に.{0,4}なし|とくに.{0,4}ない|とくに.{0,4}なし|とくにな$|特にな$|^わかな$|^わかない$|わならない|いろいろ)/i;
+        const _RE_NOANSWER_DISPLAY = /(?:なし|^ない$|^無い$|^無し$|^なき$|^なさ$|わから|分から|解ら|判ら|浮かば|覚えて|思い(?:出せ|浮か|つか|付か)|知らない|しらない|しらなし|不明|ふめい|ありません|ありがとう|よろしく|^ナッシング$|^none$|特に.{0,4}ない|特に.{0,4}なし|とくに.{0,4}ない|とくに.{0,4}なし|とくにな[いしぃ]?$|特にな[いしぃ]?$|^わかな$|^わかない$|わならない|いろいろ)/i;
 
         function normalizeText(raw) {
             if (raw === null || raw === undefined || raw === '') return null;
@@ -2381,7 +2383,7 @@
                 : (months.includes(state.mainMonth) ? state.mainMonth : (months.at(-1) || ''));
 
             if (analysisSel) {
-                analysisSel.innerHTML = months.map(month => `<option value="${month}">${month}</option>`).join('') || '<option value="">--</option>';
+                analysisSel.innerHTML = months.map(month => `<option value="${escHtml(month)}">${escHtml(month)}</option>`).join('') || '<option value="">--</option>';
                 analysisSel.value = targetMonth;
             }
 
@@ -2393,7 +2395,7 @@
             const allIr = allMonths('ir');
             const allMp = allMonths('mp');
             const allUnique = [...new Set([...allIr, ...allMp])].sort();
-            chips.innerHTML = allUnique.map(month => `<span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-white/20 text-white border border-white/30">${month}</span>`).join('');
+            chips.innerHTML = allUnique.map(month => `<span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold bg-white/20 text-white border border-white/30">${escHtml(month)}</span>`).join('');
 
             const tabBar = document.getElementById('tabBar');
             tabBar.classList.toggle('hidden', allUnique.length === 0 && !_crossTabData);
@@ -3209,7 +3211,7 @@
             };
             const getCell = (name) => {
                 if (cells.has(name)) return cells.get(name);
-                const c = { count: 0, ...emptyQ() };
+                const c = { count: 0, wbCount: 0, ...emptyQ() };
                 cells.set(name, c);
                 return c;
             };
@@ -3236,9 +3238,9 @@
                     const cell = getCell(grp);
                     total.count++; cell.count++;
                     // WBウェイト後カウント（WB列がなければ1とみなす）
-                    const wb = wbColIdx !== -1 ? (parseFloat(row[wbColIdx]) || 1) : 1;
-                    total.wbCount = (total.wbCount || 0) + wb;
-                    cell.wbCount = (cell.wbCount || 0) + wb;
+                    const wb = wbColIdx !== -1 ? Math.max(parseFloat(row[wbColIdx]) || 1, 0.001) : 1;
+                    total.wbCount += wb;
+                    cell.wbCount += wb;
 
                     // Q1/Q2 free-text
                     const q1Set = new Set();
